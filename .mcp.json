@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "plbx-cocos": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/Users/evgenii/Desktop/playable/plbx-cocos-mcp/src/index.js"],
+      "env": {
+        "COCOS_PROJECT_ROOT": "."
+      }
+    }
+  }
+}
