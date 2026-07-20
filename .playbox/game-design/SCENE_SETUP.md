@@ -34,7 +34,9 @@ Canvas
 │   └── Panel                 (panel.png)                                        [CTAView]
 │       ├── FreecashLogo      (freecash_logo.png)
 │       ├── TitleLabel        ("LEVEL COMPLETE")
-│       ├── FcRow             (coin_fc.png + FcTotalLabel "19")
+│       ├── FcRow             (пустой контейнер)
+│       │   ├── FcIcon        (coin_fc.png, отдельная нода — сохраняет квадратный аспект иконки)
+│       │   └── FcTotalLabel  ("19")
 │       └── PlayButton        (button_play.png, "PLAY & EARN")
 └── GameManager
     ├── GameEntryPoint        [GameEntryPoint]

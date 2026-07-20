@@ -64,9 +64,19 @@ GDD §4 требует адаптив под portrait И landscape. **Допущ
 - Блоки спавнятся из `Block.prefab` по данным уровня (не пред-размещены в сцене) — осознанное решение
   ради data-driven и «минимум хардкода».
 - Вес: следить за суммой ассетов (бюджет 5 MB) уже на фазе 4.
-- `assets/scene.scene` и design-resolution 720×1280 ещё не настроены (подтверждено Фазой 0 через MCP
-  `get_project_info`/`list_assets` — 0 сцен в проекте, в `settings/v2` нет записи о резолюции). Это ожидаемо
-  до Фазы 5–6 (`cocos-scene-builder`, `SCENE_SETUP.md`) — не блокер, а напоминание не считать сцену готовой
-  раньше факта.
+- `assets/scene.scene` создана (вручную) и design-resolution выставлена **720×1280** в Project Settings
+  (владелец проекта подтвердил). **Урок с граблями:** первый проход `cocos-scene-builder` поправил только
+  `Canvas`-ноду через `apply_edits` (contentSize/position), не саму project-level настройку — `get_project_info`
+  показывал `designResolution: null`. Cocos же на следующей загрузке сцены пересчитывает contentSize
+  full-stretch-нод (`Widget alignFlags` = все стороны, напр. `Canvas`/`Background`/`SafeArea`) под реальную
+  project-level резолюцию и **тихо затирает** ручную правку ноды — откат воспроизвёлся именно так. После того
+  как резолюцию выставили в самом редакторе, те же три ноды пришлось поправить ещё раз. Правило на будущее:
+  правка `Canvas.UITransform.contentSize` через MCP — **временная/косметическая**, пока project-level
+  Design Resolution не выставлена в редакторе вручную (MCP не может её писать); проверять
+  `get_project_info().designResolution` **до** правки Canvas, не только сам `.scene`.
+- 9-slice границы (`panel`, `board_frame`, `button_play`, `block_tile`, `block_main` — все `border*=0` в
+  `.meta`) — владелец проекта настраивает вручную через Sprite Editor в Cocos (см. `ASSET_SPEC.md` за
+  точными значениями border: panel 40, board_frame 48, button_play 32, block_tile/block_main 24). До этого
+  `_type=SLICED`, выставленный в сцене, визуально ведёт себя как обычный stretch.
 - Build/export process (per-network упаковка, нейминг, сдача) — детально расписан в `PLBX_LIFECYCLE_GUIDE.md`,
   `MOLOCO_V2_EXPORT_GUIDE.md`, `APPLOVIN_AXON_ANALYTICS.md`; сверять с `EXPORT_CHECKLIST.md` перед сдачей каждой сети.
