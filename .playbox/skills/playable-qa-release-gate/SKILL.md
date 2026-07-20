@@ -39,8 +39,14 @@ Run the strongest available static checks.
 Typical commands:
 
 ```text
-npx tsc --noEmit -p tsconfig.json
+node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs
 ```
+
+Prefer this over a bare `npx tsc --noEmit -p tsconfig.json` when `tools/plbx-cocos-typecheck` is present in the
+project: it uses the TypeScript and `cc.d.ts` bundled with the installed Cocos Creator and checks only
+`assets/**/*.ts`, instead of `tsconfig.json`'s wider `temp/tsconfig.cocos.json`-inherited file selection (which
+tends to surface noisy, irrelevant errors from engine declaration files). Fall back to bare `tsc` only if the
+tool isn't available in this project.
 
 Also check for banned patterns in new code:
 - `find(`

@@ -4,7 +4,8 @@
 
 ## Фаза 1 — Контракты и конфиг · cocos-coder
 - Файлы: <TODO: GameEntryPoint, Models/*, event-bus/events.ts (+EVT_*), GameConfig>
-- Ворота: `tsc --noEmit` = 0 ошибок.
+- Ворота: `node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs` = 0 ошибок (fallback: `tsc --noEmit`,
+  если инструмента нет в проекте).
 
 ## Фаза 2 — Systems · cocos-coder
 - Файлы: <TODO: Systems/*>

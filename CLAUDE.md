@@ -23,13 +23,22 @@
 (`…/plbx-cocos-mcp/src/index.js`) и `COCOS_PROJECT_ROOT: "."`. **Обнови `args`-путь под свою машину.**
 Проверить подключение: `/mcp` в интерактивной сессии — должен быть виден `plbx-cocos` (18 инструментов).
 
+## `tools/plbx-cocos-typecheck` — обязателен для гейтов компиляции
+
+Все TS-гейты (`tsc --noEmit` в фазах 1–3 и QA) идут через
+`node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs`, а не через голый `tsc`. Голый `tsc -p
+tsconfig.json` тянет `temp/tsconfig.cocos.json`, чья выборка файлов шире продакшн-кода, и не знает модуль `cc`
+своей версии — на выходе десятки нерелевантных ошибок из движковых деклараций, которые маскируют реальные.
+`plbx-cocos-typecheck` берёт TypeScript и `cc.d.ts`, забандленные в установленный Cocos Creator, и проверяет
+только `assets/**/*.ts` по явному allowlist. Подробности — `tools/plbx-cocos-typecheck/README.md`.
+
 ## Пайплайн и владение
 
 `/build-playable` оркестрирует под-агентов по фазам (не смешивая зависимые фазы):
 
 | Фаза | Владелец | Артефакт | Ворота |
 |------|----------|----------|--------|
-| 1 Контракты+конфиг | `cocos-coder` | Core/Models/events/GameConfig | `tsc --noEmit` |
+| 1 Контракты+конфиг | `cocos-coder` | Core/Models/events/GameConfig | `plbx-cocos-typecheck` (см. `tools/`) |
 | 2 Systems | `cocos-coder` | логика, EventBus | компиляция, нет запрещённых API |
 | 3 Views | `cocos-coder` | визуал/ввод | нет `find()`, `@property=null` |
 | 4 Ассеты | `cocos-asset-maker` | PNG placeholder | файлы+размеры по ASSET_SPEC |

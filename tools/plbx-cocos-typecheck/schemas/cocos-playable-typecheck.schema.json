@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://playbox.dev/schemas/cocos-playable-typecheck.schema.json",
+  "title": "Cocos Playable Typecheck Configuration",
+  "description": "Configuration for plbx-cocos-typecheck — a read-only TypeScript typecheck helper for Cocos Creator playable projects.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "number",
+      "const": 1,
+      "description": "Schema version. Only version 1 is supported."
+    },
+    "creator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": ["string", "null"],
+          "description": "Explicit path to Cocos Creator app/installation."
+        },
+        "expectedVersion": {
+          "type": ["string", "null"],
+          "description": "Expected Creator version. Helper fails if it doesn't match."
+        },
+        "typescript": {
+          "type": "string",
+          "enum": ["bundled"],
+          "description": "TypeScript source. Only 'bundled' (from Creator installation) is supported in v1."
+        },
+        "ccDeclarationPath": {
+          "type": ["string", "null"],
+          "description": "Override path to cc.d.ts. Must declare module 'cc'."
+        },
+        "extraTypeFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional .d.ts files inside project root to include in typecheck."
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "type": "string",
+          "default": ".",
+          "description": "Project root relative to --project. Must stay inside project root."
+        },
+        "sourceRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["assets"],
+          "description": "Directories to search for production TypeScript files."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["**/*.ts"],
+          "description": "Glob patterns for files to include."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for files to exclude."
+        },
+        "followSymlinks": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, follow symlinks during source discovery. Default false for safety."
+        }
+      }
+    },
+    "compiler": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "readRootCompilerOptions": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true, read allowed compilerOptions from tsconfig.json (without following extends)."
+        },
+        "options": {
+          "type": "object",
+          "description": "Compiler options. noEmit:true is forced and cannot be overridden.",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

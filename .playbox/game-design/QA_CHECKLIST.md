@@ -27,7 +27,7 @@
 - [ ] Проверка на «узком» и «широком» aspect (safe area).
 
 ## Архитектура / статика
-- [ ] `tsc --noEmit` = 0 ошибок.
+- [ ] `plbx-cocos-typecheck` = 0 ошибок (`node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs`).
 - [ ] Нет `find()`/`getChildByName()`/`getComponentInChildren()`.
 - [ ] Нет production `console.log`.
 - [ ] Все `@property` привязаны в сцене или явно `null` + в OPEN_ISSUES.

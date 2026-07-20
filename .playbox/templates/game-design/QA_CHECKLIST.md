@@ -3,7 +3,7 @@
 > Ручной регрессионный прогон перед сдачей. Тестируем весь core loop, не только изменённую фичу.
 
 ## Static
-- [ ] `npx tsc --noEmit -p tsconfig.json` = 0 ошибок
+- [ ] `node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs` = 0 ошибок (fallback: `npx tsc --noEmit -p tsconfig.json`, если инструмента нет в проекте)
 - [ ] Нет `find(` / `getChildByName(` / `getComponentInChildren(` в новом коде
 - [ ] Нет ручных `.meta`, нет production `console.log`, нет новых зависимостей
 

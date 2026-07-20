@@ -43,7 +43,8 @@ argument-hint: "[phase=N — начать с фазы N] [example=debt-collector
 
 ### Фаза 1 — Контракты и конфиг (cocos-coder)
 Core-entry, Models, `enum` фаз, расширение `events.ts` (новые `EVT_*` **в конец**), поля `GameConfig`
-по GDD. **Ворота:** `tsc --noEmit` без ошибок; новые файлы на месте.
+по GDD. **Ворота:** `node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs` без ошибок (fallback:
+`tsc --noEmit`, если инструмента нет в проекте); новые файлы на месте.
 
 ### Фаза 2 — Systems / логика (cocos-coder)
 Системы из `ARCHITECTURE.md`: подписки/отписки на EventBus предсказуемы, правила вне View.
@@ -66,7 +67,8 @@ Core-entry, Models, `enum` фаз, расширение `events.ts` (новые 
 нет битых ссылок.
 
 ### Фаза 7 — QA / release gate (скилл playable-qa-release-gate)
-`tsc --noEmit`; скан запрещённых паттернов; scene-валидация; ручной сценарий из `QA_CHECKLIST.md`;
+`node tools/plbx-cocos-typecheck/bin/plbx-cocos-typecheck.mjs`; скан запрещённых паттернов; scene-валидация;
+ручной сценарий из `QA_CHECKLIST.md`;
 проверка lifecycle Playbox (`plbx.game_ready/tap/download/game_end`); `EXPORT_CHECKLIST.md`.
 **Ворота:** все слои pass или блокеры явно приняты.
 
