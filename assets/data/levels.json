@@ -1,0 +1,30 @@
+{
+  "levels": [
+    {
+      "level": 1,
+      "reward": 9,
+      "exitRow": 2,
+      "exitSide": "right",
+      "blocks": [
+        { "id": 1, "axis": "horizontal", "length": 2, "col": 0, "row": 2, "isMain": true },
+        { "id": 2, "axis": "vertical", "length": 2, "col": 2, "row": 2, "isMain": false },
+        { "id": 3, "axis": "vertical", "length": 2, "col": 4, "row": 1, "isMain": false },
+        { "id": 4, "axis": "vertical", "length": 2, "col": 5, "row": 2, "isMain": false }
+      ]
+    },
+    {
+      "level": 2,
+      "reward": 10,
+      "exitRow": 2,
+      "exitSide": "right",
+      "blocks": [
+        { "id": 1, "axis": "horizontal", "length": 2, "col": 0, "row": 2, "isMain": true },
+        { "id": 2, "axis": "vertical", "length": 3, "col": 2, "row": 2, "isMain": false },
+        { "id": 3, "axis": "vertical", "length": 2, "col": 3, "row": 1, "isMain": false },
+        { "id": 4, "axis": "vertical", "length": 2, "col": 4, "row": 2, "isMain": false },
+        { "id": 5, "axis": "vertical", "length": 2, "col": 5, "row": 2, "isMain": false },
+        { "id": 6, "axis": "horizontal", "length": 2, "col": 3, "row": 5, "isMain": false }
+      ]
+    }
+  ]
+}

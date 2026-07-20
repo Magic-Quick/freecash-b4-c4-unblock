@@ -47,7 +47,9 @@ LEVEL_CLEAR → (level 1 → следующий LEVEL_PLAY; level 2 → CTA).
 `EVT_SWIPE`, `EVT_BLOCK_MOVED`, `EVT_BLOCK_BLOCKED`, `EVT_MAIN_PATH_CLEAR`, `EVT_MAIN_BLOCKED`,
 `EVT_MAIN_DRIVE_START`, `EVT_MAIN_REACHED_EXIT`, `EVT_LEVEL_STARTED`, `EVT_LEVEL_SOLVED`,
 `EVT_PHASE_CHANGED`, `EVT_COINS_CHANGED`, `EVT_TUTORIAL_SHOW`, `EVT_TUTORIAL_HIDE`,
-`EVT_REQUEST_CTA`, `EVT_PLAY_SOUND`, `EVT_TAP` — с интерфейсами `*Event` (см. ARCHITECTURE §4).
+`EVT_REQUEST_CTA`, `EVT_PLAY_SOUND`, `EVT_TAP`, `EVT_REWARD_SEQUENCE_DONE` — с интерфейсами `*Event`
+(см. ARCHITECTURE §4). `EVT_REWARD_SEQUENCE_DONE` — добавлено на Фазе 0: `GameStateSystem` слушает его,
+а не `EVT_LEVEL_SOLVED` напрямую, чтобы L2 не стартовал раньше, чем долетят монеты L1.
 
 ## 6. Структура сцены (кратко)
 `Canvas → BackgroundLayer / SafeArea(HudLayer, GameplayLayer, TutorialLayer, FxLayer, Disclaimer) /

@@ -64,5 +64,9 @@ GDD §4 требует адаптив под portrait И landscape. **Допущ
 - Блоки спавнятся из `Block.prefab` по данным уровня (не пред-размещены в сцене) — осознанное решение
   ради data-driven и «минимум хардкода».
 - Вес: следить за суммой ассетов (бюджет 5 MB) уже на фазе 4.
+- `assets/scene.scene` и design-resolution 720×1280 ещё не настроены (подтверждено Фазой 0 через MCP
+  `get_project_info`/`list_assets` — 0 сцен в проекте, в `settings/v2` нет записи о резолюции). Это ожидаемо
+  до Фазы 5–6 (`cocos-scene-builder`, `SCENE_SETUP.md`) — не блокер, а напоминание не считать сцену готовой
+  раньше факта.
 - Build/export process (per-network упаковка, нейминг, сдача) — детально расписан в `PLBX_LIFECYCLE_GUIDE.md`,
   `MOLOCO_V2_EXPORT_GUIDE.md`, `APPLOVIN_AXON_ANALYTICS.md`; сверять с `EXPORT_CHECKLIST.md` перед сдачей каждой сети.

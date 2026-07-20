@@ -13,10 +13,10 @@
 ## 2. Системы
 | System | Подписки (EVT_*) | Публикует | Держит Model |
 |--------|------------------|-----------|--------------|
-| `GameStateSystem` | `EVT_LEVEL_SOLVED` | `EVT_PHASE_CHANGED`, `EVT_LEVEL_STARTED`, `EVT_REQUEST_CTA` | `GameStateModel` |
+| `GameStateSystem` | `EVT_REWARD_SEQUENCE_DONE` | `EVT_PHASE_CHANGED`, `EVT_LEVEL_STARTED`, `EVT_REQUEST_CTA` | `GameStateModel` |
 | `BoardSystem` | `EVT_SWIPE`, `EVT_LEVEL_STARTED` | `EVT_BLOCK_MOVED`, `EVT_BLOCK_BLOCKED`, `EVT_MAIN_PATH_CLEAR`, `EVT_MAIN_BLOCKED` | `BoardModel` |
 | `DriveSystem` | `EVT_MAIN_PATH_CLEAR` | `EVT_MAIN_DRIVE_START`, `EVT_MAIN_REACHED_EXIT`, `EVT_LEVEL_SOLVED` | — |
-| `RewardSystem` | `EVT_LEVEL_SOLVED` | `EVT_COINS_CHANGED` | — (счётчик в GameStateModel) |
+| `RewardSystem` | `EVT_LEVEL_SOLVED` | `EVT_COINS_CHANGED`, `EVT_REWARD_SEQUENCE_DONE` | — (счётчик в GameStateModel) |
 | `TutorialSystem` | `EVT_LEVEL_STARTED`, `EVT_BLOCK_MOVED` | `EVT_TUTORIAL_SHOW`, `EVT_TUTORIAL_HIDE` | — |
 | `SoundSystem` (stub) | `EVT_PLAY_SOUND` | — | — |
 
@@ -25,9 +25,14 @@
   публикует `EVT_BLOCK_MOVED{blockId, fromCell, toCell, hitWall}` (или `EVT_BLOCK_BLOCKED` если сдвиг = 0).
   После каждого хода проверяет коридор главного блока к выходу → `EVT_MAIN_PATH_CLEAR` / `EVT_MAIN_BLOCKED`.
 - **DriveSystem** — на `EVT_MAIN_PATH_CLEAR` запускает автопроезд (View), по завершении → `EVT_LEVEL_SOLVED{level}`.
-- **GameStateSystem** — на `EVT_LEVEL_SOLVED`: level 1 → стартует level 2 (`EVT_LEVEL_STARTED`);
-  level 2 → `EVT_REQUEST_CTA`. Меняет фазу, публикует `EVT_PHASE_CHANGED`.
-- **RewardSystem** — на `EVT_LEVEL_SOLVED` начисляет `level1Reward`/`level2Reward`, `EVT_COINS_CHANGED{total, delta, isFinal}`.
+- **RewardSystem** — на `EVT_LEVEL_SOLVED` начисляет `level1Reward`/`level2Reward`, публикует
+  `EVT_COINS_CHANGED{total, delta, isFinal}` **сразу** (запускает fly-in монет во View), затем ждёт
+  `GameConfig.coinFlyDuration` (`scheduleOnce`, без магического числа) и публикует
+  `EVT_REWARD_SEQUENCE_DONE{level, isFinal}` — сигнал «FX награды визуально завершён».
+- **GameStateSystem** — подписан на `EVT_REWARD_SEQUENCE_DONE`, а НЕ на `EVT_LEVEL_SOLVED` напрямую: это
+  гарантирует, что L1 полностью долетит монетами и подсветится счётчик, прежде чем появится L2 (нет гонки
+  между стартом L2 и FX награды L1). level 1 (`isFinal=false`) → стартует level 2 (`EVT_LEVEL_STARTED`);
+  level 2 (`isFinal=true`) → `EVT_REQUEST_CTA`. Меняет фазу, публикует `EVT_PHASE_CHANGED`.
 
 ## 3. Views (публичные методы)
 - `BoardView` — на `EVT_LEVEL_STARTED` спавнит ячейки и `Block.prefab` из `BoardModel`; держит map `blockId→BlockView`;
@@ -59,6 +64,7 @@
 | `EVT_REQUEST_CTA` | `{totalFc:number}` | GameStateSystem | CTAView |
 | `EVT_PLAY_SOUND` | `{id:string}` | many | SoundSystem |
 | `EVT_TAP` | `{}` | BlockView/InputRouter | Playbox (`plbx.tap()`) |
+| `EVT_REWARD_SEQUENCE_DONE` | `{level:number, isFinal:boolean}` | RewardSystem (после `coinFlyDuration`) | GameStateSystem |
 
 ## 5. Явные ссылки (@property) — для scene-builder
 - `GameEntryPoint`: ссылки на все ноды-системы + `GameConfig`.
