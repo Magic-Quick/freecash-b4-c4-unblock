@@ -31,9 +31,16 @@
 - [ ] Нет денежных символов/купюр/$/банк-карт; монета — только «FC».
 - [ ] Клиентский логотип Freecash (не игровое/сгенерённое лого).
 - [ ] CTA «PLAY & EARN» ведёт на корректный стор для сборки сети.
-- [ ] Инжект per-network SDK/тегов (`plbx` adapter) корректен под каждую сеть (см. OPEN_ISSUES #3).
+- [ ] Инжект per-network SDK/тегов (`plbx` adapter) корректен под каждую сеть (см. OPEN_ISSUES #3;
+      подключение по `PLBX_LIFECYCLE_GUIDE.md`).
+- [ ] Кнопка mute/unmute реагирует на старт-сигнал и live mute/unmute сети (Moloco QA блокирует без неё
+      при `start_muted=true`) — см. OPEN_ISSUES #9.
 - [ ] Плейбл проходит smoke-сценарий из `QA_CHECKLIST.md` в предпросмотре сети.
 - [ ] Валидация в валидаторе каждой сети (Mintegral/AppLovin/… preview) = pass.
+- [ ] **Moloco**: собран, загружен и провалидирован по шагам `MOLOCO_V2_EXPORT_GUIDE.md` (Package → Validate →
+      Deploy/Upload → внешний валидатор Moloco); сдаётся `launcher-final.html`, не сырой `launcher.html`.
+- [ ] **AppLovin**: события из `APPLOVIN_AXON_ANALYTICS.md` (минимум `DISPLAYED`) фирятся и проходят
+      package-time/preview-валидатор; `CHALLENGE_*` — по статусу OPEN_ISSUES #8.
 
 ## После сборки
 - [ ] Все билды провалидированы.

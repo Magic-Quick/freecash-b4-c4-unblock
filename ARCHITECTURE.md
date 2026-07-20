@@ -69,6 +69,14 @@
 
 ## 6. Playbox lifecycle (`Core/Playbox.ts` — обёртка над глобальным `plbx`, no-op в редакторе)
 - `plbx.game_ready()` — в `GameEntryPoint.start()` после wiring сцены.
-- `plbx.tap()` — в центральном пути ввода (первый touch по блоку / `EVT_TAP`).
+- `plbx.tap()` — в центральном пути ввода (первый touch по блоку / `EVT_TAP`); слушать оба `TOUCH_START`
+  и `MOUSE_DOWN`, дебаунс 100ms (десктоп-превью/валидаторы шлют только мышь).
 - `plbx.download()` — на клик CTA-кнопки.
 - `plbx.game_end()` — при показе CTA (терминальное состояние).
+- `plbx.is_muted()` / `plbx.on_mute_change()` / `plbx.is_audio()` — состояние звука от ad-контейнера;
+  `AudioController` держит его вместе с явным выбором игрока (кнопка mute/unmute — см. `OPEN_ISSUES.md` #9,
+  ассет ещё не создан).
+- `plbx.expose(name, fn, label)` — опционально, для ручного прогона состояний (endcard/restart) в Preview.
+
+Детальные сигнатуры, debounce-паттерны и per-network поведение — `.playbox/game-design/PLBX_LIFECYCLE_GUIDE.md`.
+Сетевые build/export шаги — `MOLOCO_V2_EXPORT_GUIDE.md`, `APPLOVIN_AXON_ANALYTICS.md`.

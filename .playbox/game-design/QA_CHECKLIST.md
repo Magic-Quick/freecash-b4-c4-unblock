@@ -35,10 +35,14 @@
 - [ ] Подписки на EventBus снимаются в `onDestroy`.
 
 ## Playbox lifecycle
+> Детально — `PLBX_LIFECYCLE_GUIDE.md`; per-network шаги — `MOLOCO_V2_EXPORT_GUIDE.md`, `APPLOVIN_AXON_ANALYTICS.md`.
 - [ ] `plbx.game_ready()` — один раз при готовности сцены.
-- [ ] `plbx.tap()` — в центральном пути ввода.
+- [ ] `plbx.tap()` — в центральном пути ввода, слушает и `TOUCH_START`, и `MOUSE_DOWN` (иначе engagement/redirection
+      не задетектятся в десктоп-превью/валидаторе Moloco).
 - [ ] `plbx.download()` — на клик CTA.
 - [ ] `plbx.game_end()` — при показе CTA.
+- [ ] Кнопка mute/unmute реагирует на `plbx.is_muted()`/`plbx.on_mute_change()` (требование Moloco при
+      `start_muted=true`) — см. `OPEN_ISSUES.md` #9, ассет пока не создан.
 
 ## Соответствие требованиям Freecash (GDD)
 - [ ] Нет денег/купюр/$/банк-карт/слова «Баланс»/отсылок к выводу средств.

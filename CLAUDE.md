@@ -52,7 +52,11 @@
 - Архитектура — всегда `ARCHITECTURE.md` (не `MERGE_ARCHITECTURE.md`).
 - Спека ассетов — всегда `.playbox/game-design/ASSET_SPEC.md` (не `ASSETS_GUIDE.md`).
 - Дизайн-доки живут в `.playbox/game-design/`; корневые — `GDD.md`, `ARCHITECTURE.md`, `AGENTS.md`.
-- Precedence при конфликте: GDD → OPEN_ISSUES → ARCHITECTURE → spec-доки → phase-планы → QA/EXPORT → agent/command.
+- Сетевые build/export-гайды (Moloco, AppLovin, Mintegral, …) — тоже в `.playbox/game-design/`, имя
+  `SCREAMING_SNAKE_CASE` без пробелов/тире (напр. `MOLOCO_V2_EXPORT_GUIDE.md`, не `Moloco V2.md`); они
+  детализируют `EXPORT_CHECKLIST.md` и `ARCHITECTURE.md` §Playbox lifecycle, а не заменяют их.
+- Precedence при конфликте: GDD → OPEN_ISSUES → ARCHITECTURE → spec-доки → phase-планы → QA/EXPORT →
+  network build-гайды → agent/command.
 
 ## Структура набора
 ```
