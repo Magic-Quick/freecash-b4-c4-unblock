@@ -47,6 +47,10 @@
 - Не трогать `/temp`, `/library`, `/profiles`, `/settings`; не менять `package.json`/`tsconfig.json` без нужды.
 - EventBus: новые `EVT_*` добавлять **в конец** файла; не переименовывать без плана миграции.
 - `.playbox/reference/**` и `.playbox/examples/**` — не бандлить в продакшн.
+- **`Sprite.spriteFrame` — всегда `<uuid>@f9941` (суб-ассет), никогда голый UUID картинки.** Голый UUID
+  резолвится в `cc.ImageAsset`, а не `cc.SpriteFrame` → «unknown type» в инспекторе / рантайм-ошибка
+  `Cannot read properties of undefined (reading '0')`. Перед `set_component_property ... spriteFrame` всегда
+  `get_asset_info` на картинку и бери UUID из строки `sprite-frame:`. Детали — `cocos-scene-builder.md`.
 
 ## Конвенции доков (единые имена)
 - Архитектура — всегда `ARCHITECTURE.md` (не `MERGE_ARCHITECTURE.md`).

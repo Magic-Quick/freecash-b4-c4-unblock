@@ -57,6 +57,20 @@ model: sonnet
 - Ссылки `@property` на ноду/компонент: формы `{"$node": "Path/To/Node"}`,
   `{"$component": {node: "Path", type: "MyView"}}`, `{"$asset": "db://.../sprite.png"}`.
 
+### ⚠️ `spriteFrame` — это суб-ассет image, а не сам image (частая ошибка)
+
+Импорт PNG создаёт **два суб-ассета**: `texture` и `sprite-frame` (у обоих 2D-спрайтов — фиксированный
+subId `@f9941`, но не полагайся на это вслепую, всегда проверяй через `get_asset_info`). `Sprite.spriteFrame`
+должен ссылаться **на суб-ассет `<uuid>@f9941`**, а не на голый UUID картинки — голый UUID резолвится в
+`cc.ImageAsset`, а не `cc.SpriteFrame`, и Cocos либо покажет «unknown type» в поле Sprite Frame инспектора,
+либо кинет рантайм-ошибку вида `Cannot read properties of undefined (reading '0')` (движок читает
+sprite-frame-специфичные поля типа `rect[0]` у объекта не того типа).
+
+**Обязательный шаг перед `set_component_property ... spriteFrame`:** вызови `get_asset_info` на картинку,
+возьми UUID из строки `sprite-frame:` (не UUID из шапки/`Type: image`), и передай его в
+`{"$asset": "<uuid>@f9941"}`. После записи — `grep`/`inspect_node` спот-чек, что в файле реально лежит
+`{"__uuid__": "...@f9941", "__expectedType__": "cc.SpriteFrame"}`, а не голый UUID.
+
 ## Операции `apply_edits` (основные)
 
 `set_node_property` (name/active/layer/position/rotation/scale) · `add_node` · `remove_node` · `reparent` ·
