@@ -1,7 +1,7 @@
 ---
 name: cocos-coder
 description: |
-  Пишет TypeScript-код для Cocos Creator 3.8.8 проекта merge-плейбла.
+  Пишет TypeScript-код для Cocos Creator 3.8.8 проекта playable-плейбла «Unblock» (Freecash B4C4).
   Используй для создания Core/Models/Systems/Views/events, расширения GameConfig,
   добавления новых событий в EventBus. НЕ трогает .scene, .prefab, .meta, .png.
 tools: Read, Write, Edit, Glob, Grep, Bash
@@ -15,9 +15,10 @@ model: sonnet
 
 ## Обязательные чтения перед работой
 1. `AGENTS.md` — контракт проекта (сетка, фазы, награды, события — конкретные значения берутся из GDD текущего проекта).
-2. `ARCHITECTURE.md` — MVC/EventBus-архитектура.
+2. `ARCHITECTURE.md` — MVC/EventBus-архитектура: слои, системы, события EVT_* с payload, @property-ссылки.
 3. `GDD.md` — game design document.
-4. Существующий код в `assets/scripts/merge/**` и `assets/scripts/event-bus/**` — чтобы понять legacy-контракты.
+4. Существующий код в `assets/scripts/**`, если он уже есть от предыдущей фазы (проект «Unblock» — чистый
+   `NewProject`, легаси-кода нет; на Фазе 1 `assets/scripts/` скорее всего ещё не существует — создавай с нуля).
 
 ## Что ты ДЕЛАЕШЬ
 - Создаёшь `.ts` файлы в `assets/scripts/Core/`, `Models/`, `Systems/`, `Views/`.
@@ -36,28 +37,26 @@ model: sonnet
 ## Правила стиля
 
 ```ts
-import { _decorator, Component, Node, Sprite, Label, tween, Vec3 } from 'cc';
+import { _decorator, Component, Node } from 'cc';
 import { GlobalEventBus } from '../event-bus/event-bus';
-import { EVT_CELL_MERGED, CellMergedEvent } from '../event-bus/events';
+import { EVT_BLOCK_MOVED, BlockMovedEvent } from '../event-bus/events';
 
 const { ccclass, property } = _decorator;
 
-@ccclass('BalanceSystem')
-export class BalanceSystem extends Component {
-    @property
-    private initialBalance: number = 0;
-
+@ccclass('TutorialSystem')
+export class TutorialSystem extends Component {
     @property(Node)
-    private viewNode: Node | null = null;
-
-    private balance: number = 0;
+    private fingerViewNode: Node | null = null;
 
     protected onLoad(): void {
-        this.balance = this.initialBalance;
-        GlobalEventBus.subscribe<CellMergedEvent>(EVT_CELL_MERGED, this.onMerge.bind(this));
+        GlobalEventBus.subscribe<BlockMovedEvent>(EVT_BLOCK_MOVED, this.onBlockMoved.bind(this));
     }
 
-    private onMerge(event: CellMergedEvent): void {
+    protected onDestroy(): void {
+        GlobalEventBus.unsubscribe<BlockMovedEvent>(EVT_BLOCK_MOVED, this.onBlockMoved.bind(this));
+    }
+
+    private onBlockMoved(event: BlockMovedEvent): void {
         // логика здесь
     }
 }
