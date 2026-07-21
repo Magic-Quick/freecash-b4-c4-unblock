@@ -59,16 +59,15 @@ Canvas
 | `GameEntryPoint.rewardSystem` | `GameManager/Systems/RewardSystem` |
 | `GameEntryPoint.tutorialSystem` | `GameManager/Systems/TutorialSystem` |
 | `GameEntryPoint.ctaView` | `CTAOverlay/Panel` (CTAView) |
-| `BoardSystem.boardViewNode` | `.../GameplayLayer/Board` |
-| `DriveSystem.boardViewNode` | `.../GameplayLayer/Board` |
+| `BoardSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
+| `RewardSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
+| `TutorialSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `BoardView.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `BoardView.cellPrefab` | `db://assets/prefabs/Cell.prefab` |
 | `BoardView.blockPrefab` | `db://assets/prefabs/Block.prefab` |
 | `BoardView.cellsContainer` | `.../GameplayLayer/CellsContainer` |
 | `BoardView.blocksContainer` | `.../GameplayLayer/BlocksContainer` |
 | `BoardView.exitArrow` | `.../GameplayLayer/ExitArrow` (ExitArrowView) |
-| `RewardSystem.coinCounterNode` | `.../HudLayer/CoinCounter` (CoinCounterView) |
-| `TutorialSystem.fingerViewNode` | `.../TutorialLayer/Finger` (TutorialFingerView) |
 | `CTAView.logoNode` | `CTAOverlay/Panel/FreecashLogo` |
 | `CTAView.titleLabel` | `CTAOverlay/Panel/TitleLabel` (Label) |
 | `CTAView.fcLabel` | `CTAOverlay/Panel/FcRow/FcTotalLabel` (Label) |

@@ -72,8 +72,9 @@
 
 ## 5. Явные ссылки (@property) — для scene-builder
 - `GameEntryPoint`: ссылки на все ноды-системы + `GameConfig`.
-- `BoardSystem.boardViewNode`; `DriveSystem.boardViewNode`; `TutorialSystem.fingerViewNode`;
-  `RewardSystem.coinCounterNode`.
+- Системы (Фаза 2) ни на одну View-ноду `@property`-ссылок не держат — связь System↔View исключительно
+  через `GlobalEventBus` (см. §2/§4); `BoardSystem`/`DriveSystem`/`TutorialSystem`/`RewardSystem` не нуждаются
+  в `boardViewNode`/`fingerViewNode`/`coinCounterNode` и таких полей не имеют (проверено в реализации).
 - `BoardView`: `cellPrefab`, `blockPrefab`, `blocksContainer`, `cellsContainer`, `config`.
 - `CTAView`: `logoNode`, `titleLabel`, `fcLabel`, `playButton`. Все `@property` дефолт `null`.
 

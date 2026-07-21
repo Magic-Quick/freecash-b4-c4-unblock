@@ -182,7 +182,7 @@
     "_priority": 0,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 998.0683156654887,
+    "_orthoHeight": 640,
     "_near": 0,
     "_far": 2000,
     "_color": {
@@ -283,8 +283,8 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 360,
-      "y": 640,
+      "x": 0,
+      "y": 0,
       "z": 0
     },
     "_lrot": {
@@ -383,10 +383,10 @@
     "__prefab": null,
     "_alignFlags": 45,
     "_target": null,
-    "_left": 0,
-    "_right": 0,
-    "_top": 0,
-    "_bottom": 0,
+    "_left": -360,
+    "_right": 360,
+    "_top": 640,
+    "_bottom": -640,
     "_horizontalCenter": 0,
     "_verticalCenter": 0,
     "_isAbsLeft": true,
@@ -500,7 +500,7 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": 130,
+      "y": 410,
       "z": 0
     },
     "_lrot": {
@@ -644,7 +644,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 68.4921875,
+      "width": 68.47337613293051,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -677,7 +677,7 @@
     "_string": "LEVEL",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 22,
+    "_actualFontSize": 22.75625,
     "_fontSize": 22,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -776,7 +776,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 15.572265625,
+      "width": 15.570920270015105,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -809,7 +809,7 @@
     "_string": "1",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 28,
+    "_actualFontSize": 28.962500000000002,
     "_fontSize": 28,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -1431,7 +1431,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 79.4599609375,
+      "width": 79.4381372734139,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -1464,7 +1464,7 @@
     "_string": "MOVES",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 22,
+    "_actualFontSize": 22.75625,
     "_fontSize": 22,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -1563,7 +1563,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 15.572265625,
+      "width": 15.570920270015105,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -1596,7 +1596,7 @@
     "_string": "0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 28,
+    "_actualFontSize": 28.962500000000002,
     "_fontSize": 28,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -1695,8 +1695,8 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 10.0107421875,
-      "height": 50.4
+      "width": 10.00603344505287,
+      "height": 50.400000000000006
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1728,7 +1728,7 @@
     "_string": "0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 18,
+    "_actualFontSize": 18.618750000000002,
     "_fontSize": 18,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -1940,7 +1940,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 14.4599609375,
+      "width": 14.45793405400302,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -1973,7 +1973,7 @@
     "_string": "0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 26,
+    "_actualFontSize": 26.89375,
     "_fontSize": 26,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
@@ -3117,7 +3117,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 255.673828125,
+      "width": 255.58089241880663,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -3150,7 +3150,7 @@
     "_string": "For illustration purposes only",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 20,
+    "_actualFontSize": 20.6875,
     "_fontSize": 20,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
