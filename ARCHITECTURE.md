@@ -15,7 +15,7 @@
 |--------|------------------|-----------|--------------|
 | `GameStateSystem` | `EVT_REWARD_SEQUENCE_DONE` | `EVT_PHASE_CHANGED`, `EVT_LEVEL_STARTED`, `EVT_REQUEST_CTA` | `GameStateModel` |
 | `BoardSystem` | `EVT_SWIPE`, `EVT_LEVEL_STARTED` | `EVT_BLOCK_MOVED`, `EVT_BLOCK_BLOCKED`, `EVT_MAIN_PATH_CLEAR`, `EVT_MAIN_BLOCKED` | `BoardModel` |
-| `DriveSystem` | `EVT_MAIN_PATH_CLEAR` | `EVT_MAIN_DRIVE_START`, `EVT_MAIN_REACHED_EXIT`, `EVT_LEVEL_SOLVED` | — |
+| `DriveSystem` | `EVT_MAIN_PATH_CLEAR`, `EVT_MAIN_REACHED_EXIT` | `EVT_MAIN_DRIVE_START`, `EVT_LEVEL_SOLVED` | — |
 | `RewardSystem` | `EVT_LEVEL_SOLVED` | `EVT_COINS_CHANGED`, `EVT_REWARD_SEQUENCE_DONE` | — (счётчик в GameStateModel) |
 | `TutorialSystem` | `EVT_LEVEL_STARTED`, `EVT_BLOCK_MOVED` | `EVT_TUTORIAL_SHOW`, `EVT_TUTORIAL_HIDE` | — |
 | `SoundSystem` (stub) | `EVT_PLAY_SOUND` | — | — |
@@ -24,7 +24,11 @@
   На `EVT_SWIPE{blockId, dir}`: проверяет ось блока, двигает его до крайней свободной ячейки по направлению,
   публикует `EVT_BLOCK_MOVED{blockId, fromCell, toCell, hitWall}` (или `EVT_BLOCK_BLOCKED` если сдвиг = 0).
   После каждого хода проверяет коридор главного блока к выходу → `EVT_MAIN_PATH_CLEAR` / `EVT_MAIN_BLOCKED`.
-- **DriveSystem** — на `EVT_MAIN_PATH_CLEAR` запускает автопроезд (View), по завершении → `EVT_LEVEL_SOLVED{level}`.
+- **DriveSystem** — на `EVT_MAIN_PATH_CLEAR` (guard: `GameStateModel.tryStartDrive`, максимум раз на уровень)
+  публикует `EVT_MAIN_DRIVE_START{}`, переводит фазу в `LEVEL_DRIVE` (блокирует ввод) и **ждёт**, пока View
+  главного блока (`BlockView.driveToExit()`, Фаза 3) сам не опубликует `EVT_MAIN_REACHED_EXIT{level}` по
+  завершении твина — DriveSystem не таймирует и не симулирует эту визуальную часть. По приходу
+  `EVT_MAIN_REACHED_EXIT` публикует `EVT_LEVEL_SOLVED{level}`.
 - **RewardSystem** — на `EVT_LEVEL_SOLVED` начисляет `level1Reward`/`level2Reward`, публикует
   `EVT_COINS_CHANGED{total, delta, isFinal}` **сразу** (запускает fly-in монет во View), затем ждёт
   `GameConfig.coinFlyDuration` (`scheduleOnce`, без магического числа) и публикует
@@ -54,7 +58,7 @@
 | `EVT_MAIN_PATH_CLEAR` | `{}` | BoardSystem | DriveSystem |
 | `EVT_MAIN_BLOCKED` | `{}` | BoardSystem | (резерв) |
 | `EVT_MAIN_DRIVE_START` | `{}` | DriveSystem | BoardView, SoundSystem |
-| `EVT_MAIN_REACHED_EXIT` | `{level:number}` | DriveSystem | FxLayer, SoundSystem |
+| `EVT_MAIN_REACHED_EXIT` | `{level:number}` | BlockView (главный блок, по завершении `driveToExit()`) | DriveSystem, FxLayer, SoundSystem |
 | `EVT_LEVEL_STARTED` | `{level:number}` | GameStateSystem | BoardSystem, BoardView, TutorialSystem, HudView |
 | `EVT_LEVEL_SOLVED` | `{level:number}` | DriveSystem | GameStateSystem, RewardSystem |
 | `EVT_PHASE_CHANGED` | `{phase:GamePhase}` | GameStateSystem | (подписчики по нужде) |
