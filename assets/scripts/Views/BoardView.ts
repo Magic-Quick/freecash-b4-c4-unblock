@@ -87,11 +87,17 @@ export class BoardView extends Component {
         // "Шаг сетки" — cellSize+cellSpacing одним числом; та же величина передаётся в BlockView.setup()
         // и используется TutorialFingerView, чтобы все Views считали позиции в одной системе координат.
         const pitch = this.config.cellSize + this.config.cellSpacing;
+        // Центрирующий сдвиг: без него ячейка (0,0) рисуется в локальном (0,0) контейнера, а не в его
+        // углу — вся сетка уезжает в правый нижний квадрант относительно центрированного BoardFrame
+        // (контейнеры без anchorPoint-смещения детей, см. SCENE_SETUP.md). Тот же расчёт в
+        // BlockView.setup()/TutorialFingerView.showHint() — все три View обязаны рисовать в одном месте.
+        const offsetX = -(this.config.gridCols * pitch) / 2;
+        const offsetY = (this.config.gridRows * pitch) / 2;
         if (this.cellPrefab && this.cellsContainer) {
             for (let row = 0; row < this.config.gridRows; row++) {
                 for (let col = 0; col < this.config.gridCols; col++) {
                     const cellNode = instantiate(this.cellPrefab);
-                    cellNode.setPosition((col + 0.5) * pitch, -(row + 0.5) * pitch, 0);
+                    cellNode.setPosition((col + 0.5) * pitch + offsetX, -(row + 0.5) * pitch + offsetY, 0);
                     this.cellsContainer.addChild(cellNode);
                 }
             }

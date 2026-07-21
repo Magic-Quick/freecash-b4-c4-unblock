@@ -39,6 +39,12 @@ export class BlockView extends Component {
     // Смещение центра блока (в ячейках) вдоль его оси относительно "базовой" (col,row) ячейки —
     // считается один раз в setup(), т.к. length/axis блока не меняются в течение уровня.
     private axisCenterOffset = 0;
+    // Сдвиг, центрирующий сетку на локальном (0,0) контейнера — тот же расчёт, что и в
+    // BoardView.buildLevel()/TutorialFingerView.showHint(), чтобы все три View рисовали ячейки в
+    // одном и том же месте. Без него ячейка (0,0) рисуется в (0,0) контейнера, а не в его углу —
+    // вся сетка уезжает в правый нижний квадрант относительно центрированного BoardFrame.
+    private gridOffsetX = 0;
+    private gridOffsetY = 0;
 
     private activeTween: Tween<Node> | null = null;
     private touchStartPos: { x: number; y: number } | null = null;
@@ -64,6 +70,8 @@ export class BlockView extends Component {
         this.cellPitch = cellPitch;
         this.level = level;
         this.axisCenterOffset = (blockModel.length - 1) / 2;
+        this.gridOffsetX = -((this.config?.gridCols ?? 0) * cellPitch) / 2;
+        this.gridOffsetY = ((this.config?.gridRows ?? 0) * cellPitch) / 2;
         this.applyPosition({ col: blockModel.col, row: blockModel.row });
         if (this.sprite) {
             this.sprite.spriteFrame = blockModel.isMain ? this.mainFrame : this.tileFrame;
@@ -89,12 +97,12 @@ export class BlockView extends Component {
             return new Vec3();
         }
         if (model.axis === 'horizontal') {
-            const x = (cell.col + this.axisCenterOffset + 0.5) * this.cellPitch;
-            const y = -(cell.row + 0.5) * this.cellPitch;
+            const x = (cell.col + this.axisCenterOffset + 0.5) * this.cellPitch + this.gridOffsetX;
+            const y = -(cell.row + 0.5) * this.cellPitch + this.gridOffsetY;
             return new Vec3(x, y, 0);
         }
-        const x = (cell.col + 0.5) * this.cellPitch;
-        const y = -(cell.row + this.axisCenterOffset + 0.5) * this.cellPitch;
+        const x = (cell.col + 0.5) * this.cellPitch + this.gridOffsetX;
+        const y = -(cell.row + this.axisCenterOffset + 0.5) * this.cellPitch + this.gridOffsetY;
         return new Vec3(x, y, 0);
     }
 

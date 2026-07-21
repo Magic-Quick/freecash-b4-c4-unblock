@@ -51,8 +51,12 @@ export class TutorialFingerView extends Component {
         }
         this.node.active = true;
         const pitch = this.config.cellSize + this.config.cellSpacing;
-        const from = new Vec3((fromCell.col + 0.5) * pitch, -(fromCell.row + 0.5) * pitch, 0);
-        const to = new Vec3((toCell.col + 0.5) * pitch, -(toCell.row + 0.5) * pitch, 0);
+        // Тот же центрирующий сдвиг, что в BoardView.buildLevel()/BlockView.cellToLocal() — палец
+        // должен указывать на реальную позицию ячейки, а не на смещённую (см. комментарий там).
+        const offsetX = -(this.config.gridCols * pitch) / 2;
+        const offsetY = (this.config.gridRows * pitch) / 2;
+        const from = new Vec3((fromCell.col + 0.5) * pitch + offsetX, -(fromCell.row + 0.5) * pitch + offsetY, 0);
+        const to = new Vec3((toCell.col + 0.5) * pitch + offsetX, -(toCell.row + 0.5) * pitch + offsetY, 0);
         this.node.setPosition(from);
         this.stopLoop();
         this.loopTween = tween(this.node)

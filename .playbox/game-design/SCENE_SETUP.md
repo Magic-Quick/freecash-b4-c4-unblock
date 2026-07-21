@@ -39,15 +39,20 @@ Canvas
 │       │   └── FcTotalLabel  ("19")
 │       └── PlayButton        (button_play.png, "PLAY & EARN")
 └── GameManager
-    ├── GameEntryPoint        [GameEntryPoint]
-    └── Systems
-        ├── GameStateSystem   [GameStateSystem]
-        ├── BoardSystem       [BoardSystem]
-        ├── DriveSystem       [DriveSystem]
-        ├── RewardSystem      [RewardSystem]
-        ├── TutorialSystem    [TutorialSystem]
-        └── SoundSystem       [SoundSystem]
+    ├── GameEntryPoint        [GameConfig, GameEntryPoint]
+    ├── Systems
+    │   ├── GameStateSystem   [GameStateSystem]
+    │   ├── BoardSystem       [BoardSystem]
+    │   ├── DriveSystem       [DriveSystem]
+    │   ├── RewardSystem      [RewardSystem]
+    │   ├── TutorialSystem    [TutorialSystem]
+    │   └── SoundSystem       [SoundSystem]
+    ├── InputRouter           [InputRouter]  — глобальный tap-счётчик, см. Фаза 3 handoff
+    └── LayoutAdapter         [LayoutAdapter] — детекция ориентации, см. Фаза 3 handoff / OPEN_ISSUES #7
 ```
+
+`GameConfig` живёт как компонент на самой ноде `GameEntryPoint` (не отдельная нода) — так его читают
+`GameEntryPoint.config` и все `*.config`-ссылки систем/views по одному и тому же node-пути (Фаза 5, готово).
 
 ## Wiring (@property → нода/компонент)
 | Компонент.свойство | Цель (путь или ассет) |
