@@ -29,9 +29,9 @@ Canvas
 │   │   ├── MoneyFountain     (пустой контейнер)                                 [MoneyFountainView]
 │   │   └── Sparks            (spark.png, active=false — включает MoneyFountainView.flashExit())
 │   └── DisclaimerLabel       ("For illustration purposes only", низ, всегда виден) [DisclaimerView]
-├── CTAOverlay                (active=false)
-│   ├── Dim                   (чёрный Sprite alpha ~0.6, fullscreen)
-│   └── Panel                 (panel.png)                                        [CTAView]
+├── CTAOverlay                (active=true — [CTAView] само висит здесь, см. заметку ниже)
+│   ├── Dim                   (чёрный Sprite alpha ~0.6, fullscreen; active=false до показа CTA)
+│   └── Panel                 (panel.png; active=false до показа CTA)
 │       ├── FreecashLogo      (freecash_logo.png)
 │       ├── TitleLabel        ("LEVEL COMPLETE")
 │       ├── FcRow             (пустой контейнер)
@@ -54,6 +54,13 @@ Canvas
 `GameConfig` живёт как компонент на самой ноде `GameEntryPoint` (не отдельная нода) — так его читают
 `GameEntryPoint.config` и все `*.config`-ссылки систем/views по одному и тому же node-пути (Фаза 5, готово).
 
+**`CTAView` живёт на `CTAOverlay`, не на `Panel`** (исправлено на реальном прогоне Фазы 6). `CTAOverlay`
+активен с самого старта сцены — только его дети `Dim`/`Panel` стартуют `active=false`. Причина: Cocos не
+вызывает `onLoad()` для потомков неактивного предка (см. [Life Cycle Callbacks](https://docs.cocos.com/creator/3.8/manual/en/scripting/life-cycle-callbacks.html)) — если бы `CTAView` висел на `Panel` внутри
+неактивного `CTAOverlay`, его подписка на `EVT_REQUEST_CTA` никогда бы не зарегистрировалась, и CTA не
+показывался бы вообще. `CTAView.show()` теперь переключает `dimNode`/`panelNode` напрямую, а не
+`this.node`/`this.node.parent`.
+
 ## Wiring (@property → нода/компонент)
 | Компонент.свойство | Цель (путь или ассет) |
 |--------------------|-----------------------|
@@ -63,7 +70,7 @@ Canvas
 | `GameEntryPoint.driveSystem` | `GameManager/Systems/DriveSystem` |
 | `GameEntryPoint.rewardSystem` | `GameManager/Systems/RewardSystem` |
 | `GameEntryPoint.tutorialSystem` | `GameManager/Systems/TutorialSystem` |
-| `GameEntryPoint.ctaView` | `CTAOverlay/Panel` (CTAView) |
+| `GameEntryPoint.ctaView` | `CTAOverlay` (CTAView) |
 | `BoardSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `RewardSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `TutorialSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
@@ -75,6 +82,8 @@ Canvas
 | `BoardView.cellsContainer` | `.../GameplayLayer/CellsContainer` |
 | `BoardView.blocksContainer` | `.../GameplayLayer/BlocksContainer` |
 | `BoardView.exitArrow` | `.../GameplayLayer/ExitArrow` (ExitArrowView) |
+| `CTAView.dimNode` | `CTAOverlay/Dim` |
+| `CTAView.panelNode` | `CTAOverlay/Panel` |
 | `CTAView.logoNode` | `CTAOverlay/Panel/FreecashLogo` |
 | `CTAView.titleLabel` | `CTAOverlay/Panel/TitleLabel` (Label) |
 | `CTAView.fcLabel` | `CTAOverlay/Panel/FcRow/FcTotalLabel` (Label) |

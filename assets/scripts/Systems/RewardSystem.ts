@@ -32,21 +32,26 @@ export class RewardSystem extends Component {
 
     private onLevelSolved(event: LevelSolvedEvent): void {
         const model = GameStateSystem.model;
+        console.error('[DEBUG RewardSystem] onLevelSolved', { level: event.level });
         // Guard на GameStateModel — награда начисляется не более одного раза на уровень.
         if (!model.tryGrantReward(event.level)) {
+            console.error('[DEBUG RewardSystem] tryGrantReward REJECTED (already fired for this level)', { level: event.level });
             return;
         }
         if (!this.config) {
+            console.error('[DEBUG RewardSystem] this.config is NULL — aborting reward flow');
             return;
         }
         const reward = event.level === 1 ? this.config.level1Reward : this.config.level2Reward;
         const total = model.addCoins(reward);
         const isFinal = event.level === 2;
+        console.error('[DEBUG RewardSystem] granted reward', { reward, total, isFinal, coinFlyDuration: this.config.coinFlyDuration });
         // Публикуем сразу — View запускает fly-in монет не дожидаясь ничего дополнительного.
         GlobalEventBus.publish<CoinsChangedEvent>(EVT_COINS_CHANGED, { total, delta: reward, isFinal });
         // Фикс Фазы 0: следующий уровень/CTA не должны стартовать раньше, чем визуально долетят монеты —
         // ждём coinFlyDuration через scheduleOnce (не raw setTimeout) и только тогда сигналим о завершении.
         this.scheduleOnce(() => {
+            console.error('[DEBUG RewardSystem] publish EVT_REWARD_SEQUENCE_DONE', { level: event.level, isFinal });
             GlobalEventBus.publish<RewardSequenceDoneEvent>(EVT_REWARD_SEQUENCE_DONE, { level: event.level, isFinal });
         }, this.config.coinFlyDuration);
     }

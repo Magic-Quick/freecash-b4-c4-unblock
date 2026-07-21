@@ -8,8 +8,20 @@ const { ccclass, property } = _decorator;
 // Экран CTA (ARCHITECTURE.md §3/§6). show() — единственное место, где фирит Playbox.game_end():
 // терминальное состояние геймплея наступает в момент ПОКАЗА CTA, а не по клику кнопки — частый
 // источник провала валидаторов Moloco, если complete beacon перепутан с click beacon.
+//
+// Компонент живёт на самой ноде `CTAOverlay` (активной с самого старта сцены), а не на `Panel` —
+// найдено на реальном прогоне Фазы 6: если бы он висел на `Panel` внутри неактивного `CTAOverlay`,
+// его `onLoad()` вообще не выполнился бы (Cocos не вызывает onLoad для потомков неактивного предка —
+// см. Life Cycle Callbacks), и подписка на EVT_REQUEST_CTA никогда бы не зарегистрировалась. Видимость
+// переключаем на дочерних `dimNode`/`panelNode`, а не на `this.node`/`this.node.parent`.
 @ccclass('CTAView')
 export class CTAView extends Component {
+    @property(Node)
+    public dimNode: Node | null = null;
+
+    @property(Node)
+    public panelNode: Node | null = null;
+
     @property(Node)
     public logoNode: Node | null = null;
 
@@ -28,6 +40,7 @@ export class CTAView extends Component {
     private readonly _onPlayClicked = this.onPlayClicked.bind(this);
 
     protected onLoad(): void {
+        console.error('[DEBUG CTAView] onLoad — subscribing to EVT_REQUEST_CTA');
         GlobalEventBus.subscribe<RequestCtaEvent>(EVT_REQUEST_CTA, this._onRequestCta);
         this.playButton?.node.on(Button.EventType.CLICK, this._onPlayClicked, this);
     }
@@ -39,16 +52,18 @@ export class CTAView extends Component {
     }
 
     private onRequestCta(event: RequestCtaEvent): void {
+        console.error('[DEBUG CTAView] onRequestCta received', { totalFc: event.totalFc });
         this.show(event.totalFc);
     }
 
     public show(totalFc: number): void {
-        // Активируем и сам Panel (this.node), и его родительский CTAOverlay (Dim + Panel), который
-        // сцена держит active=false до терминального события (SCENE_SETUP.md) — без find(), просто
-        // прямая ссылка на parent ноды, на которой висит этот компонент.
-        this.node.active = true;
-        if (this.node.parent) {
-            this.node.parent.active = true;
+        console.error('[DEBUG CTAView] show()', { totalFc, hasDimNode: !!this.dimNode, hasPanelNode: !!this.panelNode });
+        // `CTAOverlay` (this.node) сам активен с запуска сцены — скрыты только визуальные дети.
+        if (this.dimNode) {
+            this.dimNode.active = true;
+        }
+        if (this.panelNode) {
+            this.panelNode.active = true;
         }
         if (this.fcLabel) {
             this.fcLabel.string = `${totalFc}`;
