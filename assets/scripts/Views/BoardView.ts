@@ -104,6 +104,9 @@ export class BoardView extends Component {
                 if (!blockView) {
                     return;
                 }
+                // BlockView instantiates at runtime — a prefab @property can't be wired to the
+                // scene's GameConfig node ahead of time, so BoardView forwards its own reference.
+                blockView.config = this.config;
                 blockView.setup(block, pitch, level);
                 this.blockViews.set(block.id, blockView);
                 if (block.isMain) {

@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Tween, tween, Vec3, EventTouch, UITransform } from 'cc';
+import { _decorator, Component, Node, Tween, tween, Vec3, EventTouch, UITransform, Sprite, SpriteFrame } from 'cc';
 import { GameConfig } from '../Core/GameConfig';
 import { BlockModel } from '../Models/BlockModel';
 import { GlobalEventBus } from '../event-bus/event-bus';
@@ -18,6 +18,18 @@ const { ccclass, property } = _decorator;
 export class BlockView extends Component {
     @property(GameConfig)
     public config: GameConfig | null = null;
+
+    // Одна и та же нода/prefab обслуживает и препятствие, и главный блок (ARCHITECTURE.md §3,
+    // IMPLEMENTATION_PHASES.md Фаза 4) — вид выбирается здесь по BlockModel.isMain, а не отдельными
+    // заранее разложенными в сцене блоками.
+    @property(Sprite)
+    public sprite: Sprite | null = null;
+
+    @property(SpriteFrame)
+    public tileFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public mainFrame: SpriteFrame | null = null;
 
     private blockModel: BlockModel | null = null;
     // "Шаг сетки" (cellSize+cellSpacing одним числом), переданный из BoardView.buildLevel() — держит
@@ -53,6 +65,22 @@ export class BlockView extends Component {
         this.level = level;
         this.axisCenterOffset = (blockModel.length - 1) / 2;
         this.applyPosition({ col: blockModel.col, row: blockModel.row });
+        if (this.sprite) {
+            this.sprite.spriteFrame = blockModel.isMain ? this.mainFrame : this.tileFrame;
+        }
+        // Визуальный размер вдоль оси растёт с length (9-slice не искажает углы); поперёк оси блок
+        // всегда занимает ровно одну ячейку. spacing вычитается один раз, т.к. cellPitch уже включает
+        // зазор после каждой ячейки, а последняя занятая ячейка блока зазора после себя не добавляет.
+        const uiTransform = this.node.getComponent(UITransform);
+        if (uiTransform) {
+            const spacing = this.config?.cellSpacing ?? 0;
+            const span = blockModel.length * cellPitch - spacing;
+            const cross = cellPitch - spacing;
+            uiTransform.setContentSize(
+                blockModel.axis === 'horizontal' ? span : cross,
+                blockModel.axis === 'horizontal' ? cross : span,
+            );
+        }
     }
 
     private cellToLocal(cell: GridCell): Vec3 {
