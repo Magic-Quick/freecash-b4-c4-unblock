@@ -45,7 +45,8 @@
   Главный блок: `driveToExit()` (автопроезд вправо за край поля — как блок, без машинки; концепт-1).
 - `CoinCounterView` — `addCoins(delta, total)` (fly-in монет + count-up), `highlight()` (на финале).
 - `TutorialFingerView` — `showHint(fromPos, toPos)`, `hide()` (петля свайпа).
-- `MoneyFountainView` — `burst(count)` (разлёт монет FC на solve).
+- `MoneyFountainView` — `burst(count)` (разлёт монет FC на solve); `flashExit()` (короткая вспышка `Sparks`
+  на `EVT_MAIN_REACHED_EXIT` — нода без владельца до дебаг-прохода после Фазы 3, см. `SCENE_SETUP.md`).
 - `CTAView` — `show(totalFc)`; клик по кнопке → `Playbox.download()`; pulse кнопки.
 - `ExitArrowView` — `pulse()`; `HudView` — LEVEL/MOVES панели (декор); `DisclaimerView` — статичный лейбл.
 
@@ -58,7 +59,7 @@
 | `EVT_MAIN_PATH_CLEAR` | `{}` | BoardSystem | DriveSystem |
 | `EVT_MAIN_BLOCKED` | `{}` | BoardSystem | (резерв) |
 | `EVT_MAIN_DRIVE_START` | `{}` | DriveSystem | BoardView, SoundSystem |
-| `EVT_MAIN_REACHED_EXIT` | `{level:number}` | BlockView (главный блок, по завершении `driveToExit()`) | DriveSystem, FxLayer, SoundSystem |
+| `EVT_MAIN_REACHED_EXIT` | `{level:number}` | BlockView (главный блок, по завершении `driveToExit()`) | DriveSystem, MoneyFountainView (`flashExit()`), SoundSystem |
 | `EVT_LEVEL_STARTED` | `{level:number}` | GameStateSystem | BoardSystem, BoardView, TutorialSystem, HudView |
 | `EVT_LEVEL_SOLVED` | `{level:number}` | DriveSystem | GameStateSystem, RewardSystem |
 | `EVT_PHASE_CHANGED` | `{phase:GamePhase}` | GameStateSystem | (подписчики по нужде) |

@@ -27,7 +27,7 @@ Canvas
 │   │   └── Finger            (finger.png)                                       [TutorialFingerView]
 │   ├── FxLayer
 │   │   ├── MoneyFountain     (пустой контейнер)                                 [MoneyFountainView]
-│   │   └── Sparks            (spark.png, active=false)
+│   │   └── Sparks            (spark.png, active=false — включает MoneyFountainView.flashExit())
 │   └── DisclaimerLabel       ("For illustration purposes only", низ, всегда виден) [DisclaimerView]
 ├── CTAOverlay                (active=false)
 │   ├── Dim                   (чёрный Sprite alpha ~0.6, fullscreen)
@@ -65,6 +65,8 @@ Canvas
 | `BoardView.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `BoardView.cellPrefab` | `db://assets/prefabs/Cell.prefab` |
 | `BoardView.blockPrefab` | `db://assets/prefabs/Block.prefab` |
+| `MoneyFountainView.coinFxPrefab` | `db://assets/prefabs/CoinFx.prefab` |
+| `MoneyFountainView.sparksNode` | `.../FxLayer/Sparks` |
 | `BoardView.cellsContainer` | `.../GameplayLayer/CellsContainer` |
 | `BoardView.blocksContainer` | `.../GameplayLayer/BlocksContainer` |
 | `BoardView.exitArrow` | `.../GameplayLayer/ExitArrow` (ExitArrowView) |
