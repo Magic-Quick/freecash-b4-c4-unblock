@@ -38,4 +38,10 @@ export class GameConfig extends Component {
 
     @property({ type: JsonAsset, tooltip: 'Раскладки уровней L1/L2 — assets/data/levels.json' })
     public levelsData: JsonAsset | null = null;
+
+    @property({ tooltip: 'Минимальный интервал между повторными block_slide SFX, сек (гасит спам быстрых свайпов)' })
+    public sfxBlockSlideMinInterval = 0.15;
+
+    @property({ tooltip: 'Минимальный интервал между повторными block_blocked SFX, сек' })
+    public sfxBlockBlockedMinInterval = 0.2;
 }

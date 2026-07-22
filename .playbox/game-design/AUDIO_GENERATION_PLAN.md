@@ -148,3 +148,15 @@
 ## 10. Результат этапа
 
 После выполнения плана должен быть утверждённый набор максимум из шести P0 MP3 в `assets/audio/sfx/`, протокол выбора версий, подтверждение коммерческих прав и отдельная техническая задача на AudioController/SoundSystem, mute-кнопку и Cocos wiring.
+
+### Статус: §7 (Cocos wiring) выполнен
+
+Все шесть P0 клипов на месте (`assets/audio/sfx/*-v1.mp3`, 112 KB суммарно). `SoundSystem` реализован по
+таблице из §7 — прямая подписка на доменные `EVT_BLOCK_MOVED`/`EVT_BLOCK_BLOCKED`/`EVT_MAIN_PATH_CLEAR`/
+`EVT_MAIN_DRIVE_START`/`EVT_MAIN_REACHED_EXIT`/`EVT_COINS_CHANGED`, `AudioSource.playOneShot` (не
+интерферирует с одновременными клипами), throttle на `block_slide`/`block_blocked` через новые
+`GameConfig.sfxBlockSlideMinInterval`/`sfxBlockBlockedMinInterval`, гейт на `Playbox.is_muted()`/
+`is_audio()`. `EVT_PLAY_SOUND` остался в контракте неиспользуемым (см. `events.ts`) — сознательно, план
+явно предпочитал прямую подписку. Не сделано: P1/P2-клипы (не генерировались), mute-кнопка (OPEN_ISSUES #9),
+подтверждение коммерческой лицензии генератора, ручной прогон в Preview со звуком. См. `OPEN_ISSUES.md`
+секцию «Звук» за деталями.

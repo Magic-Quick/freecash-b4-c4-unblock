@@ -20,6 +20,9 @@
 - [ ] Счётчик FC: 0 → 9 → 19; без знака $, только «FC».
 - [ ] CTA появляется ТОЛЬКО после решения L2 (не раньше — network-safe).
 - [ ] Дисклеймер «For illustration purposes only» виден на протяжении всего плейбла.
+- [ ] SFX (`block_slide`/`block_blocked`/`path_clear`/`main_drive`/`exit_whoosh`/`coin_fly`) звучат в
+      своих фазах, не клиппуют при одновременном exit+reward, быстрые свайпы не складываются в шум
+      (throttle из `GameConfig`). См. `AUDIO_GENERATION_PLAN.md` §8.
 
 ## Адаптив (GDD §4)
 - [ ] Portrait: поле, HUD, стрелка выхода, CTA-кнопка полностью в кадре, ничего не обрезано.
