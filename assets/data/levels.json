@@ -7,9 +7,10 @@
       "exitSide": "right",
       "blocks": [
         { "id": 1, "axis": "horizontal", "length": 2, "col": 0, "row": 2, "isMain": true },
-        { "id": 2, "axis": "vertical", "length": 2, "col": 2, "row": 2, "isMain": false },
-        { "id": 3, "axis": "vertical", "length": 2, "col": 4, "row": 1, "isMain": false },
-        { "id": 4, "axis": "vertical", "length": 2, "col": 5, "row": 2, "isMain": false }
+        { "id": 2, "axis": "vertical", "length": 2, "col": 4, "row": 1, "isMain": false },
+        { "id": 3, "axis": "horizontal", "length": 2, "col": 1, "row": 4, "isMain": false },
+        { "id": 4, "axis": "vertical", "length": 3, "col": 2, "row": 1, "isMain": false },
+        { "id": 5, "axis": "vertical", "length": 2, "col": 3, "row": 3, "isMain": false }
       ]
     },
     {
@@ -19,11 +20,12 @@
       "exitSide": "right",
       "blocks": [
         { "id": 1, "axis": "horizontal", "length": 2, "col": 0, "row": 2, "isMain": true },
-        { "id": 2, "axis": "vertical", "length": 3, "col": 2, "row": 2, "isMain": false },
-        { "id": 3, "axis": "vertical", "length": 2, "col": 3, "row": 1, "isMain": false },
-        { "id": 4, "axis": "vertical", "length": 2, "col": 4, "row": 2, "isMain": false },
-        { "id": 5, "axis": "vertical", "length": 2, "col": 5, "row": 2, "isMain": false },
-        { "id": 6, "axis": "horizontal", "length": 2, "col": 3, "row": 5, "isMain": false }
+        { "id": 2, "axis": "vertical", "length": 2, "col": 5, "row": 2, "isMain": false },
+        { "id": 3, "axis": "horizontal", "length": 3, "col": 1, "row": 4, "isMain": false },
+        { "id": 4, "axis": "vertical", "length": 3, "col": 2, "row": 1, "isMain": false },
+        { "id": 5, "axis": "horizontal", "length": 3, "col": 3, "row": 0, "isMain": false },
+        { "id": 6, "axis": "vertical", "length": 2, "col": 4, "row": 2, "isMain": false },
+        { "id": 7, "axis": "horizontal", "length": 2, "col": 0, "row": 5, "isMain": false }
       ]
     }
   ]

@@ -1323,7 +1323,26 @@
     "levelNumberLabel": {
       "__id__": 18
     },
-    "_id": "ZvbAtq0GKeS9RKATxv+bVA"
+    "_id": "ZvbAtq0GKeS9RKATxv+bVA",
+    "starSprites": [
+      {
+        "__id__": 22
+      },
+      {
+        "__id__": 25
+      },
+      {
+        "__id__": 28
+      }
+    ],
+    "starOnFrame": {
+      "__uuid__": "60ccecf0-210d-48c5-8d41-bfadf27eeb3f@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    },
+    "starOffFrame": {
+      "__uuid__": "570ffec0-f18c-49b1-a9b4-be9556d3104a@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    }
   },
   {
     "__type__": "cc.Node",
