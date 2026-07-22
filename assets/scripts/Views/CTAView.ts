@@ -40,7 +40,6 @@ export class CTAView extends Component {
     private readonly _onPlayClicked = this.onPlayClicked.bind(this);
 
     protected onLoad(): void {
-        console.error('[DEBUG CTAView] onLoad — subscribing to EVT_REQUEST_CTA');
         GlobalEventBus.subscribe<RequestCtaEvent>(EVT_REQUEST_CTA, this._onRequestCta);
         this.playButton?.node.on(Button.EventType.CLICK, this._onPlayClicked, this);
     }
@@ -52,12 +51,10 @@ export class CTAView extends Component {
     }
 
     private onRequestCta(event: RequestCtaEvent): void {
-        console.error('[DEBUG CTAView] onRequestCta received', { totalFc: event.totalFc });
         this.show(event.totalFc);
     }
 
     public show(totalFc: number): void {
-        console.error('[DEBUG CTAView] show()', { totalFc, hasDimNode: !!this.dimNode, hasPanelNode: !!this.panelNode });
         // `CTAOverlay` (this.node) сам активен с запуска сцены — скрыты только визуальные дети.
         if (this.dimNode) {
             this.dimNode.active = true;

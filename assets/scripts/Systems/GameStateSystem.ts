@@ -48,7 +48,6 @@ export class GameStateSystem extends Component {
 
     private onRewardSequenceDone(event: RewardSequenceDoneEvent): void {
         const model = GameStateSystem._model;
-        console.error('[DEBUG GameStateSystem] onRewardSequenceDone', { level: event.level, isFinal: event.isFinal });
         if (!event.isFinal) {
             // L1 полностью долетел (монеты + FX) — переходим на L2 (AGENTS.md §4, Фаза 0 handoff).
             model.currentLevel = 2;
@@ -59,12 +58,10 @@ export class GameStateSystem extends Component {
         }
         // L2 завершён — единственный переход в CTA за сессию.
         if (!model.tryRequestCta()) {
-            console.error('[DEBUG GameStateSystem] tryRequestCta REJECTED (already requested this session)');
             return;
         }
         model.phase = GamePhase.CTA;
         GlobalEventBus.publish<PhaseChangedEvent>(EVT_PHASE_CHANGED, { phase: model.phase });
-        console.error('[DEBUG GameStateSystem] publish EVT_REQUEST_CTA', { totalFc: model.totalCoins });
         GlobalEventBus.publish<RequestCtaEvent>(EVT_REQUEST_CTA, { totalFc: model.totalCoins });
     }
 }

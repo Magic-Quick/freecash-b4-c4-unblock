@@ -36,11 +36,9 @@ export class DriveSystem extends Component {
     private onMainPathClear(): void {
         const model = GameStateSystem.model;
         const level = model.currentLevel;
-        console.error('[DEBUG DriveSystem] onMainPathClear', { level });
         // Guard на GameStateModel — drive стартует не более одного раза на уровень (защита от повторных
         // EVT_MAIN_PATH_CLEAR при быстрых повторных свайпах, гейт Фазы 2).
         if (!model.tryStartDrive(level)) {
-            console.error('[DEBUG DriveSystem] tryStartDrive REJECTED (already fired for this level)', { level });
             return;
         }
         // Явный выход из LEVEL_PLAY — canAcceptInput() сразу перестаёт пропускать свайпы на время проезда.
@@ -49,7 +47,6 @@ export class DriveSystem extends Component {
     }
 
     private onMainReachedExit(event: MainReachedExitEvent): void {
-        console.error('[DEBUG DriveSystem] onMainReachedExit', { level: event.level });
         GlobalEventBus.publish<LevelSolvedEvent>(EVT_LEVEL_SOLVED, { level: event.level });
     }
 }

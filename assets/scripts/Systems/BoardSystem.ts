@@ -180,13 +180,11 @@ export class BoardSystem extends Component {
 
     private checkMainPath(): void {
         const clear = this.computeMainClear();
-        console.error('[DEBUG BoardSystem] checkMainPath', { clear, lastMainClear: this.lastMainClear });
         if (clear === this.lastMainClear) {
             return;
         }
         this.lastMainClear = clear;
         if (clear) {
-            console.error('[DEBUG BoardSystem] publish EVT_MAIN_PATH_CLEAR');
             GlobalEventBus.publish<MainPathClearEvent>(EVT_MAIN_PATH_CLEAR, {});
         } else {
             GlobalEventBus.publish<MainBlockedEvent>(EVT_MAIN_BLOCKED, {});
