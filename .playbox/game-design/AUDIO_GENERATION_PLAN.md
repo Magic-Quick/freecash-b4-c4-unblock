@@ -14,7 +14,7 @@
 - Никакой речи, вокала, слов, названий брендов, денежных терминов или звуков слот-машины/казино.
 - Звуки должны быть пригодны для коммерческого использования. До финального экспорта подтвердить лицензию/права выбранного генератора и сохранить ссылку на условия, дату и аккаунт-источник в задаче/релизной карточке.
 - Ориентир общего размера playable — **до 5 MB** (GDD §10). Для первой итерации держать суммарный вес аудио не выше **450 KB**; для этого использовать короткие моно/стерео MP3 и не добавлять музыку в финальный пакет без весового бюджета.
-- Формат генерации: `mp3_44100_128`. При необходимости оптимизации финального билда перекодировать после прослушивания только если это разрешено экспортным пайплайном; оригиналы не перезаписывать.
+- Формат генерации: `mp3_44100_128`. Инструмент принимает SFX от 0.5 s: для более короткого по ощущению UI-сигнала генерировать 0.5 s с быстрой атакой и затуханием, а не указывать недопустимую длительность. При необходимости оптимизации финального билда перекодировать после прослушивания только если это разрешено экспортным пайплайном; оригиналы не перезаписывать.
 - Пути: `assets/audio/sfx/<kebab-case-name>-vN.mp3` и `assets/audio/music/<kebab-case-name>-vN.mp3`. Версии не затирать: это позволяет A/B-сравнение.
 
 ## 2. Текущий технический контракт
@@ -29,15 +29,15 @@
 | ID для будущего `EVT_PLAY_SOUND` | Файл-кандидат | Событие/момент | Целевая длина | Приоритет |
 |---|---|---|---:|---|
 | `block_slide` | `assets/audio/sfx/block-slide-v1.mp3` | успешный `EVT_BLOCK_MOVED` | 0.35–0.50 s | P0 |
-| `block_blocked` | `assets/audio/sfx/block-blocked-v1.mp3` | `EVT_BLOCK_BLOCKED`, не чаще одного на действие | 0.18–0.30 s | P0 |
+| `block_blocked` | `assets/audio/sfx/block-blocked-v1.mp3` | `EVT_BLOCK_BLOCKED`, не чаще одного на действие | 0.50 s | P0 |
 | `path_clear` | `assets/audio/sfx/path-clear-v1.mp3` | финальное освобождение пути / `EVT_MAIN_PATH_CLEAR` | 0.45–0.65 s | P0 |
 | `main_drive` | `assets/audio/sfx/main-drive-v1.mp3` | `EVT_MAIN_DRIVE_START`; синхронно с `mainDriveDuration` 0.7 s | 0.65–0.80 s | P0 |
-| `exit_whoosh` | `assets/audio/sfx/exit-whoosh-v1.mp3` | `EVT_MAIN_REACHED_EXIT` + flash | 0.35–0.55 s | P0 |
+| `exit_whoosh` | `assets/audio/sfx/exit-whoosh-v1.mp3` | `EVT_MAIN_REACHED_EXIT` + flash | 0.50 s | P0 |
 | `coin_fly` | `assets/audio/sfx/coin-fly-v1.mp3` | `EVT_COINS_CHANGED`, соответствует `coinFlyDuration` 0.6 s | 0.50–0.70 s | P0 |
-| `coin_count` | `assets/audio/sfx/coin-count-v1.mp3` | финальный tick/подсветка счётчика | 0.18–0.30 s | P1 |
+| `coin_count` | `assets/audio/sfx/coin-count-v1.mp3` | финальный tick/подсветка счётчика | 0.50 s | P1 |
 | `level_complete` | `assets/audio/sfx/level-complete-v1.mp3` | только после `EVT_REWARD_SEQUENCE_DONE` на L1 | 0.70–1.00 s | P1 |
 | `final_fanfare` | `assets/audio/sfx/final-fanfare-v1.mp3` | финальные 19 FC / CTA | 1.20–1.80 s | P1 |
-| `cta_tap` | `assets/audio/sfx/cta-tap-v1.mp3` | нажатие Play & Earn до `plbx.download()` | 0.12–0.22 s | P2 |
+| `cta_tap` | `assets/audio/sfx/cta-tap-v1.mp3` | нажатие Play & Earn до `plbx.download()` | 0.50 s | P2 |
 
 **Правило приоритета:** сначала сделать и проверить P0. P1 добавлять только если размер и микс P0 проходят QA; P2 необязателен, поскольку переход в стор может оборвать звук.
 
@@ -49,21 +49,21 @@
 
 | Файл | Prompt | Параметры инструмента |
 |---|---|---|
-| `block-slide-v1.mp3` | `Short tactile wooden puzzle block sliding smoothly across a polished board, soft wood friction and a gentle stop, warm casual mobile game UI, clean dry mix, no music, no voice, no crowd` | `type: sfx`, `duration_seconds: 0.45`, `prompt_influence: 0.85` |
-| `block-blocked-v1.mp3` | `Very short muted wooden puzzle block knock against a board edge, satisfying soft clack, warm casual mobile game UI, no metallic ring, no music, no voice` | `type: sfx`, `duration_seconds: 0.25`, `prompt_influence: 0.9` |
+| `block-slide-v1.mp3` | `Short tactile wooden puzzle block sliding smoothly across a polished board, soft wood friction and a gentle stop, warm casual mobile game UI, clean dry mix, no music, no voice, no crowd` | `type: sfx`, `duration_seconds: 0.5`, `prompt_influence: 0.85` |
+| `block-blocked-v1.mp3` | `Very short muted wooden puzzle block knock against a board edge, satisfying soft clack, warm casual mobile game UI, no metallic ring, no music, no voice` | `type: sfx`, `duration_seconds: 0.5`, `prompt_influence: 0.9` |
 | `path-clear-v1.mp3` | `Bright subtle puzzle solved discovery chime, two rising warm wooden mallet and soft bell notes, optimistic casual mobile game feedback, compact, no fanfare, no voice` | `type: sfx`, `duration_seconds: 0.55`, `prompt_influence: 0.8` |
 | `main-drive-v1.mp3` | `A red wooden sliding puzzle block gliding confidently to the right across a smooth board, soft friction whoosh that gently rises in pitch and resolves cleanly, warm casual mobile game, no engine, no car, no voice` | `type: sfx`, `duration_seconds: 0.75`, `prompt_influence: 0.85` |
-| `exit-whoosh-v1.mp3` | `Short cheerful exit whoosh with a soft sparkling burst, warm casual mobile puzzle game success feedback, clean and light, no explosion, no voice` | `type: sfx`, `duration_seconds: 0.45`, `prompt_influence: 0.8` |
+| `exit-whoosh-v1.mp3` | `Short cheerful exit whoosh with a soft sparkling burst, warm casual mobile puzzle game success feedback, clean and light, no explosion, no voice` | `type: sfx`, `duration_seconds: 0.5`, `prompt_influence: 0.8` |
 | `coin-fly-v1.mp3` | `A small cluster of generic gold game tokens flying upward to a UI counter, delicate bright chimes with a soft final ping, friendly casual mobile puzzle game, no slot machine, no casino, no voice` | `type: sfx`, `duration_seconds: 0.6`, `prompt_influence: 0.85` |
 
 ### P1/P2 — полировка
 
 | Файл | Prompt | Параметры инструмента |
 |---|---|---|
-| `coin-count-v1.mp3` | `Single crisp soft UI count-up tick with a tiny warm glassy ping, casual mobile puzzle game, very short, no music, no voice` | `type: sfx`, `duration_seconds: 0.22`, `prompt_influence: 0.9` |
+| `coin-count-v1.mp3` | `Single crisp soft UI count-up tick with a tiny warm glassy ping, casual mobile puzzle game, very short, no music, no voice` | `type: sfx`, `duration_seconds: 0.5`, `prompt_influence: 0.9` |
 | `level-complete-v1.mp3` | `Short warm casual puzzle level-complete sting: three ascending marimba and soft bell notes, playful and restrained, no vocals, no casino feel` | `type: sfx`, `duration_seconds: 0.85`, `prompt_influence: 0.8` |
 | `final-fanfare-v1.mp3` | `Warm celebratory casual mobile puzzle-game fanfare, bright marimba, soft bells and a gentle final sparkle, confident but restrained, no vocals, no orchestra, no casino feel` | `type: sfx`, `duration_seconds: 1.5`, `prompt_influence: 0.8` |
-| `cta-tap-v1.mp3` | `Very short soft rounded UI button press with a clean upbeat confirmation click, casual mobile game, no voice` | `type: sfx`, `duration_seconds: 0.18`, `prompt_influence: 0.9` |
+| `cta-tap-v1.mp3` | `Very short soft rounded UI button press with a clean upbeat confirmation click, casual mobile game, no voice` | `type: sfx`, `duration_seconds: 0.5`, `prompt_influence: 0.9` |
 
 ## 5. Порядок генерации и отбор
 
