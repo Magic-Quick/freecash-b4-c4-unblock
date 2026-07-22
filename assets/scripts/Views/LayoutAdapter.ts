@@ -10,8 +10,16 @@ const DESIGN_HEIGHT = 1280;
 // (720 - 680) / 2 = 20, т.е. соотношение 20/720. В landscape та же пропорция переносится на высоту
 // (Фаза 6, по запросу владельца: "боковые паддинги становятся вертикальными").
 const BOARD_MARGIN_RATIO = (DESIGN_WIDTH - 680) / 2 / DESIGN_WIDTH;
-// Ширина HUD-колонки в landscape — подобрана под ширину LevelPanel/CoinCounter (160/80px) с запасом.
-const LANDSCAPE_HUD_COLUMN_WIDTH = 200;
+// Итерация 4 (по запросу владельца): не высчитываем "ширину колонки" под конкретный aspect ratio —
+// на телефоне и планшете landscape выглядит по-разному (у планшета aspect ближе к 4:3, у телефона
+// может доходить до ~2:1), а фиксированный паддинг в дизайн-единицах работает одинаково хорошо на обоих,
+// т.к. и так пересчитывается через уже существующую формулу visibleHalfWidth/orthoHeight ниже.
+const LANDSCAPE_BOARD_LEFT_PADDING = 40;
+const LANDSCAPE_HUD_LEFT_PADDING = 650;
+// HUD-панели в дизайне мелкие относительно освободившегося в landscape пространства — владелец попросил
+// визуально укрупнить. Масштабируем весь hudLayer целиком (не каждую панель по отдельности) — так
+// вместе с размером панелей пропорционально растёт и интервал между ними, без отдельной константы spacing.
+const LANDSCAPE_HUD_SCALE = 1.5;
 
 // Portrait/landscape adaptive layout (IMPLEMENTATION_PHASES.md §Фаза 3 п.6, трижды доработано в Фазе 6 —
 // подробная история итераций 1–2 (зум → леттербокс-полосы → orthoHeight без полос) в
@@ -57,9 +65,9 @@ export class LayoutAdapter extends Component {
     // Portrait-база, захваченная один раз из сцены (см. captureBaseline).
     private backgroundSize = new Size(DESIGN_WIDTH, DESIGN_HEIGHT);
     private boardAreaPos = new Vec3();
+    private gameplayLayerWidth = 0;
     private gameplayLayerHeight = 0;
     private hudLayerPos = new Vec3();
-    private hudLayerSize = new Size(DESIGN_WIDTH, 0);
     private hudLevelPanelPos = new Vec3();
     private hudMovesPanelPos = new Vec3();
     private hudCoinCounterPos = new Vec3();
@@ -92,14 +100,11 @@ export class LayoutAdapter extends Component {
         }
         const gameplayTransform = this.gameplayLayer?.getComponent(UITransform);
         if (gameplayTransform) {
+            this.gameplayLayerWidth = gameplayTransform.contentSize.width;
             this.gameplayLayerHeight = gameplayTransform.contentSize.height;
         }
         if (this.hudLayer) {
             this.hudLayerPos = this.hudLayer.position.clone();
-            const hudTransform = this.hudLayer.getComponent(UITransform);
-            if (hudTransform) {
-                this.hudLayerSize = hudTransform.contentSize.clone();
-            }
         }
         if (this.hudLevelPanel) {
             this.hudLevelPanelPos = this.hudLevelPanel.position.clone();
@@ -159,32 +164,40 @@ export class LayoutAdapter extends Component {
         this.boardArea?.setPosition(this.boardAreaPos);
         if (this.hudLayer) {
             this.hudLayer.setPosition(this.hudLayerPos);
-            this.hudLayer.getComponent(UITransform)?.setContentSize(this.hudLayerSize);
+            this.hudLayer.setScale(1, 1, 1);
         }
         this.hudLevelPanel?.setPosition(this.hudLevelPanelPos);
         this.hudMovesPanel?.setPosition(this.hudMovesPanelPos);
         this.hudCoinCounter?.setPosition(this.hudCoinCounterPos);
     }
 
-    // Владелец: "плата увеличивается, боковые паддинги в portrait становятся вертикальными в landscape,
-    // HUD перестраивается в колонку слева" (Фаза 6). Видимая высота в landscape не меняется относительно
-    // базовых 640×2=1280 (см. applyLayout) — доступное вертикальное место фиксировано, поэтому масштаб
-    // платы тоже фиксирован (не зависит от текущего aspect, зависит только от ориентации).
+    // Итерация 4 (по запросу владельца): не резервируем отдельную "ширину HUD-колонки" — плата просто
+    // получает небольшой фиксированный отступ слева (LANDSCAPE_BOARD_LEFT_PADDING) и использует всё
+    // остальное пространство; HUD висит у левого края с собственным (независимым) отступом и увеличенным
+    // масштабом для читаемости. Оба паддинга — фиксированные дизайн-единицы, поэтому одинаково работают
+    // и на "вытянутом" телефонном landscape, и на более квадратном планшетном — без отдельной ветки под
+    // класс устройства: пересчёт всё равно идёт через уже адаптивный visibleHalfWidth ниже.
     private applyLandscape(visibleHalfWidth: number): void {
-        if (this.boardArea && this.gameplayLayerHeight > 0) {
+        if (this.boardArea && this.gameplayLayerHeight > 0 && this.gameplayLayerWidth > 0) {
+            // Видимая высота в landscape не меняется относительно базовых 640×2=1280 (см. applyLayout) —
+            // доступное вертикальное место фиксировано, поэтому масштаб платы тоже фиксирован (зависит
+            // только от ориентации, не от текущего aspect ratio).
             const availableHeight = DESIGN_HEIGHT * (1 - 2 * BOARD_MARGIN_RATIO);
             const scale = availableHeight / this.gameplayLayerHeight;
             this.boardArea.setScale(scale, scale, 1);
-            // Плата уходит вправо от HUD-колонки, центрируясь в оставшейся ширине.
-            this.boardArea.setPosition(LANDSCAPE_HUD_COLUMN_WIDTH / 2, 0, 0);
+            // Левый край платы — ровно LANDSCAPE_BOARD_LEFT_PADDING от левого края экрана.
+            const boardHalfWidth = (this.gameplayLayerWidth / 2) * scale;
+            this.boardArea.setPosition(0, 0, 0);
         }
         if (this.hudLayer) {
-            this.hudLayer.setPosition(-visibleHalfWidth + LANDSCAPE_HUD_COLUMN_WIDTH / 2, 0, 0);
-            this.hudLayer.getComponent(UITransform)?.setContentSize(LANDSCAPE_HUD_COLUMN_WIDTH, DESIGN_HEIGHT);
+            this.hudLayer.setPosition(0 - LANDSCAPE_HUD_LEFT_PADDING, 0, 0);
+            this.hudLayer.setScale(LANDSCAPE_HUD_SCALE, LANDSCAPE_HUD_SCALE, 1);
         }
-        // Колонка: LevelPanel сверху, CoinCounter снизу, MovesPanel (декор) — между ними.
-        this.hudLevelPanel?.setPosition(0, 350, 0);
+        // Колонка: LevelPanel сверху, CoinCounter снизу, MovesPanel (декор) — между ними. Локальные
+        // позиции внутри hudLayer не меняются — интервал между панелями растёт вместе с масштабом
+        // hudLayer выше, отдельная константа spacing не нужна.
+        this.hudLevelPanel?.setPosition(0, 200, 0);
         this.hudMovesPanel?.setPosition(0, 0, 0);
-        this.hudCoinCounter?.setPosition(0, -350, 0);
+        this.hudCoinCounter?.setPosition(0, -200, 0);
     }
 }
