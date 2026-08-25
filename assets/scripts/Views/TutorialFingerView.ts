@@ -44,7 +44,9 @@ export class TutorialFingerView extends Component {
         this.hide();
     }
 
-    // Петля свайпа: from → to → from, с короткой паузой на концах, пока не придёт EVT_TUTORIAL_HIDE.
+    // Петля тапа: палец задерживается у нужной половины блока и делает "нажатие" (пульс масштаба) —
+    // ход теперь по тапу, а не по свайпу (BlockView.resolveTapDirection), поэтому подсказка не должна
+    // изображать перетаскивание через всё поле, иначе жест введёт игрока в заблуждение.
     public showHint(fromCell: GridCell, toCell: GridCell): void {
         if (!this.config) {
             return;
@@ -58,13 +60,19 @@ export class TutorialFingerView extends Component {
         const offsetY = (this.config.gridRows * rowPitch) / 2;
         const from = new Vec3((fromCell.col + 0.5) * colPitch + offsetX, -(fromCell.row + 0.5) * rowPitch + offsetY, 0);
         const to = new Vec3((toCell.col + 0.5) * colPitch + offsetX, -(toCell.row + 0.5) * rowPitch + offsetY, 0);
-        this.node.setPosition(from);
+        // Нужная для хода половина блока — направление from→to, сдвиг на четверть шага сетки от
+        // fromCell в его сторону (BlockView.resolveTapDirection делит блок ровно пополам по той же оси).
+        const dirVec = new Vec3(to.x - from.x, to.y - from.y, 0).normalize();
+        const tapOffset = Math.min(colPitch, rowPitch) * 0.25;
+        const tapPoint = new Vec3(from.x + dirVec.x * tapOffset, from.y + dirVec.y * tapOffset, 0);
+        this.node.setPosition(tapPoint);
+        this.node.setScale(1, 1, 1);
         this.stopLoop();
+        const pressScale = 0.82;
         this.loopTween = tween(this.node)
-            .to(0.5, { position: to })
-            .delay(0.15)
-            .to(0.5, { position: from })
-            .delay(0.15)
+            .to(0.15, { scale: new Vec3(pressScale, pressScale, 1) })
+            .to(0.15, { scale: new Vec3(1, 1, 1) })
+            .delay(0.4)
             .union()
             .repeatForever()
             .start();

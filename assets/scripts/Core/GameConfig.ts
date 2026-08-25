@@ -79,9 +79,6 @@ export class GameConfig extends Component {
         return (this.exitNotchOffsetX + this.exitNotchWidth / 2 - this.boardInnerLeft) * this.scaleX;
     }
 
-    @property({ tooltip: 'Порог распознавания свайпа, px' })
-    public swipeMinDistance = 30;
-
     @property({ tooltip: 'Длительность слайда блока при ходе, сек' })
     public blockSlideDuration = 0.18;
 

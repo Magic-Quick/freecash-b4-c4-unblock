@@ -196,24 +196,38 @@ export class BlockView extends Component {
         this.touchStartPos = { x: loc.x, y: loc.y };
     }
 
+    // Тап вместо свайпа: блок жёстко привязан к своей оси, поэтому направление хода не нужно жестировать —
+    // тап по одной половине блока (вдоль его оси) предполагает движение в её сторону. View не решает
+    // валидность/коллизии (см. класс-комментарий) — это только геометрическая догадка о намерении; если
+    // предположенная сторона окажется занята, а противоположная свободна, BoardSystem сам развернёт ход
+    // (см. onSwipe в BoardSystem.ts) — событие и его обработка на стороне System не меняются.
     private onTouchEnd(event: EventTouch): void {
-        if (!this.touchStartPos || !this.blockModel) {
-            this.touchStartPos = null;
-            return;
-        }
-        const endLoc = event.getUILocation();
-        const dx = endLoc.x - this.touchStartPos.x;
-        const dy = endLoc.y - this.touchStartPos.y;
+        const start = this.touchStartPos;
         this.touchStartPos = null;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const minDistance = this.config?.swipeMinDistance ?? 30;
-        if (distance < minDistance) {
+        if (!start || !this.blockModel) {
             return;
         }
-        // Нормализация свободного жеста в кардинальное направление: берём ось с наибольшим
-        // абсолютным смещением. Cocos UI-координаты — y растёт вверх, поэтому dy>0 значит "up".
-        const dir = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'up' : 'down';
-        // View не решает валидность хода — просто репортит жест, решение о движении остаётся за BoardSystem.
+        const dir = this.resolveTapDirection(start);
+        if (!dir) {
+            return;
+        }
         GlobalEventBus.publish<SwipeEvent>(EVT_SWIPE, { blockId: this.blockModel.id, dir });
+    }
+
+    private resolveTapDirection(point: { x: number; y: number }): 'left' | 'right' | 'up' | 'down' | null {
+        const model = this.blockModel;
+        const uiTransform = this.node.getComponent(UITransform);
+        if (!model || !uiTransform) {
+            return null;
+        }
+        const local = uiTransform.convertToNodeSpaceAR(new Vec3(point.x, point.y, 0));
+        // node.angle поворачивает horizontal-блоки на -90° (setup()) поверх "довращательного" кадра, где
+        // локальная +Y всегда идёт вдоль оси блока (см. setup()/cellToLocal). После такого поворота
+        // локальная +Y смотрит в мировое "право" у horizontal и остаётся мировым "верх" у vertical —
+        // единственная проверка знака local.y корректна для обеих осей без отдельной ветки на угол.
+        if (model.axis === 'horizontal') {
+            return local.y > 0 ? 'right' : 'left';
+        }
+        return local.y > 0 ? 'up' : 'down';
     }
 }

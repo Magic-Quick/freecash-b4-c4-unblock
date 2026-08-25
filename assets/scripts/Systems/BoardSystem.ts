@@ -136,9 +136,22 @@ export class BoardSystem extends Component {
         if (isHorizontalSwipe !== (block.axis === 'horizontal')) {
             return;
         }
-        const dx = event.dir === 'left' ? -1 : event.dir === 'right' ? 1 : 0;
-        const dy = event.dir === 'up' ? -1 : event.dir === 'down' ? 1 : 0;
-        const { shift, hitWall } = this.computeMaxShift(block, dx, dy);
+        let dx = event.dir === 'left' ? -1 : event.dir === 'right' ? 1 : 0;
+        let dy = event.dir === 'up' ? -1 : event.dir === 'down' ? 1 : 0;
+        let { shift, hitWall } = this.computeMaxShift(block, dx, dy);
+        // Тап по блоку (BlockView.resolveTapDirection) — лишь геометрическая догадка о стороне: блок
+        // может двигаться только вдоль своей оси, а тапнутая половина иногда занята при свободной
+        // противоположной. Разворачиваем ход в свободную сторону вместо того, чтобы считать это
+        // заблокированным ходом — единственный физически возможный вариант для оси блока.
+        if (shift === 0) {
+            const opposite = this.computeMaxShift(block, -dx, -dy);
+            if (opposite.shift > 0) {
+                dx = -dx;
+                dy = -dy;
+                shift = opposite.shift;
+                hitWall = opposite.hitWall;
+            }
+        }
         if (shift === 0) {
             GlobalEventBus.publish<BlockBlockedEvent>(EVT_BLOCK_BLOCKED, { blockId: block.id });
             return;
