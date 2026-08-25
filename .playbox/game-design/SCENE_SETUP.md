@@ -2,54 +2,96 @@
 
 > Рецепт иерархии сцены для `cocos-scene-builder`. Правки — только через MCP `plbx-cocos`
 > (`apply_edits` с `dryRun` → запись → `validate_document`). Адресация по пути/`_id`, не `__id__`.
+>
+> Ревизия 2 (2026-08-25) — синхронизировано с `DESIGN_UPDATE_PLAN.md` Шаг 5: снят `Cell`-слой и FC-ветка,
+> плата — цельный запечённый арт (§2 плана), добавлены `BottomBar` и раздельные `ExitNotch`/`ExitArrows`,
+> дисклеймер переставлен под нижний бар (§8.1 плана).
 
 ## Canvas
 - Размер (designResolution): **720×1280**, origin **360,640**. Fit: Show All / Height (проверить в get_project_info).
+
+## Геометрия поля — не хардкодить
+
+Сетка платы **запечена в `board.png`**, координаты не выводятся из `cellSize`/`cellSpacing` (эти поля
+удаляются, см. план Шаг 2.1). Источник правды — `GameConfig`: `boardTextureSize`, `boardInner{Left,Top,
+Right,Bottom}`, геттеры `colPitch`/`rowPitch`, `exitNotchOffsetX`/`exitNotchWidth`. Габарит платы в
+дизайн-юнитах ≈ **552×522** (план §2). Ни одна нода/View не должна содержать числовой литерал этой
+геометрии — только чтение из `GameConfig` (ворота Шага 4 плана).
 
 ## Целевая иерархия
 ```
 Canvas
 ├── Camera
 ├── BackgroundLayer
-│   └── Background            (Sprite background.png, Widget: stretch all)
+│   └── Background            (Sprite art/bg/bg_gameplay.png — резкий фон геймплея, решение 0.10;
+│                               Widget: stretch all; фит по правилу cover §4.4 плана — LayoutAdapter)
 ├── SafeArea                  (cc.SafeArea + Widget)
 │   ├── HudLayer              (Widget: top)
-│   │   ├── LevelPanel        (panel.png; "LEVEL" + LevelNumberLabel + Stars)   [HudView]
-│   │   ├── MovesPanel        (panel.png; "MOVES" + MovesLabel + RecordLabel)   [декор]
-│   │   └── CoinCounter       (coin_fc.png + FcLabel "0")                        [CoinCounterView]
-│   ├── GameplayLayer         (центр, pos ~0,-40)
-│   │   ├── BoardFrame        (board_frame.png 9-slice, под размер поля)
-│   │   ├── CellsContainer    (пусто; BoardView спавнит Cell.prefab)
-│   │   ├── BlocksContainer   (пусто; BoardView спавнит Block.prefab)
-│   │   ├── Board             (пустая нода-якорь)                                [BoardView]
-│   │   └── ExitArrow         (exit_arrow.png у правого края, на строке выхода)  [ExitArrowView]
+│   │   ├── LevelPanel        (panel.png; "Puzzle" + Stars(star_on/star_off ×3, горит по
+│   │   │                      difficulty.stars=1) + DifficultyLabel "Beginner")            [HudView]
+│   │   ├── ChevronNext       (chevron_next.png — чистый декор, без функции; уровень один, §8.6 плана —
+│   │   │                      НЕ вешать переход между уровнями)
+│   │   └── MovesPanel        (panel.png; "Moves" + MovesLabel(live) + "Record" + RecordLabel("52",
+│   │                          статичный декор, §8.5 плана — не менять и не оживлять)          [MovesView]
+│   ├── GameplayLayer         (центр)
+│   │   ├── BoardFrame        (Sprite art/board/board.png, type=SIMPLE, нативный аспект 718×679 —
+│   │   │                      сетка уже нарисована в текстуре, без 9-slice)
+│   │   ├── BlocksContainer   (пусто; BoardView спавнит Block.prefab: 4 запечённых кадра len2/3 ×
+│   │   │                      obst/main, type=SIMPLE, sizeMode=CUSTOM — план 5.1)
+│   │   ├── Board             (пустая нода-якорь)                                            [BoardView]
+│   │   ├── ExitNotch         (Sprite art/board/exit_notch.png — статичная накладка выреза рамки,
+│   │   │                      позиция по exitRow уровня, план §2/5.4; сверить стык с рамкой
+│   │   │                      в Preview глазами — единственное реальное место риска шва)
+│   │   └── ExitArrows        (Sprite art/board/exit_arrows.png — пульсирует отдельно от статичного
+│   │                          ExitNotch, план 4.7)                                    [ExitArrowView]
 │   ├── TutorialLayer
-│   │   └── Finger            (finger.png)                                       [TutorialFingerView]
+│   │   └── Finger            (art/ui/finger.png — болванка, реальный спрайт руки ждём от владельца,
+│   │                          план §6 вопрос A / GDD §3)                            [TutorialFingerView]
 │   ├── FxLayer
-│   │   ├── MoneyFountain     (пустой контейнер)                                 [MoneyFountainView]
-│   │   └── Sparks            (spark.png, active=false — включает MoneyFountainView.flashExit())
-│   └── DisclaimerLabel       ("For illustration purposes only", низ, всегда виден) [DisclaimerView]
+│   │   └── Sparks            (art/sprites/spark.png — болванка, GDD §3; active=false, включает
+│   │                          вспышку на выходе)
+│   ├── BottomBar              (Widget: bottom; 4 кнопки + бейдж подсказок)             [BottomBarView]
+│   │   ├── RestartButton     (art/ui/btn_restart.png) — публикует EVT_RESTART_REQUEST
+│   │   ├── UndoButton        (art/ui/btn_undo.png) — публикует EVT_UNDO_REQUEST, гаснет при пустой истории
+│   │   ├── HintButton        (art/ui/btn_hint.png — лампа + пустой badge)
+│   │   │   └── HintBadgeLabel (Label, число из config.hintCount / EVT_HINTS_CHANGED)
+│   │   └── PauseButton       (art/ui/btn_pause.png — визуал и функция без изменений, план решение 0.9 /
+│   │                          §8.3: место под mute отложено до ответа по паузе, §6 вопрос B/C)
+│   │       (порядок кнопок слева направо — Restart/Undo/Hint/Pause; сверить визуально на Шаге 6.1,
+│   │        план не фиксирует порядок отдельно)
+│   └── DisclaimerLabel       ("For illustration purposes only" — под BottomBar, план §8.1: в портрете
+│                              под баром остаётся ≈245 дизайн-px запаса, дисклеймеру нужно ~30 — не
+│                              конфликтует; в лендскейпе проверить отдельно на Шаге 6.1, там вертикаль
+│                              сжата, а LayoutAdapter увеличивает плату)                [DisclaimerView]
 ├── CTAOverlay                (active=true — [CTAView] само висит здесь, см. заметку ниже)
-│   ├── Dim                   (чёрный Sprite alpha ~0.6, fullscreen; active=false до показа CTA)
+│   ├── Dim                   (Sprite art/bg/bg_blur.png — подложка пэкшота вместо чёрного scrim,
+│   │                          решение 0.10 / §8.4 плана; fullscreen; active=false до показа CTA)
 │   └── Panel                 (panel.png; active=false до показа CTA)
-│       ├── FreecashLogo      (freecash_logo.png)
+│       ├── FreecashLogo      (Sprite art/ui/freecash_logo.png — реальный логотип вместо cc.Label
+│       │                      "FREE CASH", план 5.8)
 │       ├── TitleLabel        ("LEVEL COMPLETE")
-│       ├── FcRow             (пустой контейнер)
-│       │   ├── FcIcon        (coin_fc.png, отдельная нода — сохраняет квадратный аспект иконки)
-│       │   └── FcTotalLabel  ("19")
-│       └── PlayButton        (button_play.png, "PLAY & EARN")
+│       └── PlayButton        (кастомная широкая кнопка "PLAY & EARN", рисуем сами на базе
+│                              panel.png + btn_base.png — план §4.3 №1 / Шаг 1.3; финальное имя
+│                              файла фиксирует cocos-asset-maker)
 └── GameManager
     ├── GameEntryPoint        [GameConfig, GameEntryPoint]
     ├── Systems
     │   ├── GameStateSystem   [GameStateSystem]
     │   ├── BoardSystem       [BoardSystem]
     │   ├── DriveSystem       [DriveSystem]
-    │   ├── RewardSystem      [RewardSystem]
+    │   ├── HintSystem        [HintSystem]           — новый, план 3.3
     │   ├── TutorialSystem    [TutorialSystem]
     │   └── SoundSystem       [SoundSystem]
     ├── InputRouter           [InputRouter]  — глобальный tap-счётчик, см. Фаза 3 handoff
-    └── LayoutAdapter         [LayoutAdapter] — детекция ориентации, см. Фаза 3 handoff / OPEN_ISSUES #7
+    └── LayoutAdapter         [LayoutAdapter] — детекция ориентации + фит фона (§4.4) + позиция
+                               BottomBar/дисклеймера в обеих раскладках, см. OPEN_ISSUES #7
 ```
+
+**Удалено относительно предыдущей ревизии** (план §4.2, Шаг 5.2/5.9): `CellsContainer` (и спавн
+`Cell.prefab`/`art/sprites/cell.png`), `HudLayer/CoinCounter`, `FxLayer/MoneyFountain`,
+`CTAOverlay/Panel/FcRow` (+ `FcIcon`/`FcTotalLabel`), `Systems/RewardSystem`, `CoinFx.prefab`,
+`art/ui/coin_fc.png`. `RewardSystem` стоял на критическом пути к CTA — цепочка переложена на
+`EVT_LEVEL_SOLVED → (пауза winFxDuration) → EVT_REQUEST_CTA` внутри `GameStateSystem` (план §4.2).
 
 `GameConfig` живёт как компонент на самой ноде `GameEntryPoint` (не отдельная нода) — так его читают
 `GameEntryPoint.config` и все `*.config`-ссылки систем/views по одному и тому же node-пути (Фаза 5, готово).
@@ -68,36 +110,50 @@ Canvas
 | `GameEntryPoint.gameStateSystem` | `GameManager/Systems/GameStateSystem` |
 | `GameEntryPoint.boardSystem` | `GameManager/Systems/BoardSystem` |
 | `GameEntryPoint.driveSystem` | `GameManager/Systems/DriveSystem` |
-| `GameEntryPoint.rewardSystem` | `GameManager/Systems/RewardSystem` |
+| `GameEntryPoint.hintSystem` | `GameManager/Systems/HintSystem` |
 | `GameEntryPoint.tutorialSystem` | `GameManager/Systems/TutorialSystem` |
 | `GameEntryPoint.ctaView` | `CTAOverlay` (CTAView) |
 | `BoardSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
-| `RewardSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
+| `HintSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `TutorialSystem.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `BoardView.config` | `GameManager/GameEntryPoint` (GameConfig) |
-| `BoardView.cellPrefab` | `db://assets/prefabs/Cell.prefab` |
 | `BoardView.blockPrefab` | `db://assets/prefabs/Block.prefab` |
-| `MoneyFountainView.coinFxPrefab` | `db://assets/prefabs/CoinFx.prefab` |
-| `MoneyFountainView.sparksNode` | `.../FxLayer/Sparks` |
-| `BoardView.cellsContainer` | `.../GameplayLayer/CellsContainer` |
 | `BoardView.blocksContainer` | `.../GameplayLayer/BlocksContainer` |
-| `BoardView.exitArrow` | `.../GameplayLayer/ExitArrow` (ExitArrowView) |
+| `BoardView.exitNotch` | `.../GameplayLayer/ExitNotch` |
+| `BoardView.exitArrows` | `.../GameplayLayer/ExitArrows` (ExitArrowView) |
+| `HudView.difficultyLabel` | `.../HudLayer/LevelPanel/DifficultyLabel` (Label) |
+| `MovesView.movesLabel` | `.../HudLayer/MovesPanel/MovesLabel` (Label) |
+| `MovesView.recordLabel` | `.../HudLayer/MovesPanel/RecordLabel` (Label) — статика §8.5, не пересчитывается |
+| `BottomBarView.restartButton` | `.../BottomBar/RestartButton` (Button) |
+| `BottomBarView.undoButton` | `.../BottomBar/UndoButton` (Button) |
+| `BottomBarView.hintButton` | `.../BottomBar/HintButton` (Button) |
+| `BottomBarView.hintBadgeLabel` | `.../BottomBar/HintButton/HintBadgeLabel` (Label) |
+| `BottomBarView.pauseButton` | `.../BottomBar/PauseButton` (Button) |
+| `LayoutAdapter.bottomBar` | `.../SafeArea/BottomBar` |
 | `CTAView.dimNode` | `CTAOverlay/Dim` |
 | `CTAView.panelNode` | `CTAOverlay/Panel` |
 | `CTAView.logoNode` | `CTAOverlay/Panel/FreecashLogo` |
 | `CTAView.titleLabel` | `CTAOverlay/Panel/TitleLabel` (Label) |
-| `CTAView.fcLabel` | `CTAOverlay/Panel/FcRow/FcTotalLabel` (Label) |
 | `CTAView.playButton` | `CTAOverlay/Panel/PlayButton` (Button) |
-| `CoinCounterView.label` | `.../HudLayer/CoinCounter/FcLabel` (Label) |
+
+**Удалено из wiring** (план §4.2/5.9): `RewardSystem.config`, `BoardView.cellPrefab`,
+`BoardView.cellsContainer`, `BoardView.exitArrow` (заменён на `exitNotch`/`exitArrows` выше),
+`MoneyFountainView.*`, `CoinCounterView.label`, `CTAView.fcLabel`.
 
 ## Placeholder-политика
 - Ассеты без UUID (напр. клиентский логотип) → `@property = null` + запись в `OPEN_ISSUES.md` как ручной шаг.
 - Без fake UUID и ручных `.meta`.
+- `Finger`/`Sparks` — намеренные болванки (см. иерархию выше), не удалять: сцена на них ссылается
+  (план Шаг 1.4).
 
 ## Адаптив (GDD §4)
-- Portrait — базовая раскладка выше. Landscape — обязателен: HUD-панели по краям, поле по центру.
+- Portrait — базовая раскладка выше. Landscape — обязателен: HUD-панели по краям, поле по центру,
+  `BottomBar` и `DisclaimerLabel` — обе видимы и не пересекаются (план §8.1, проверить на Шаге 6.1).
   Реализация: `Widget` на слоях + компонент-адаптер, переключающий раскладку по aspect ratio (см. OPEN_ISSUES #7).
-- Ключевое правило: поле и CTA-кнопка полностью в видимой области в обеих ориентациях, ничего не обрезается.
+- Фон: фит-cover `scale = max(screenW/1376, screenH/768)` — портрет по высоте, лендскейп по ширине,
+  4:3 лендскейп страхуется от полос (план §4.4).
+- Ключевое правило: поле, нижний бар и CTA-кнопка полностью в видимой области в обеих ориентациях,
+  ничего не обрезается.
 
 ## Legacy-ноды
 Нет (проект чистый `NewProject`). Все ноды создаются с нуля.
