@@ -12,7 +12,7 @@ import {
 const { ccclass, property } = _decorator;
 
 // Палец-подсказка (ARCHITECTURE.md §3). Позиции приходят как ячейки сетки в payload события —
-// конвертирует их в локальные пиксели через GameConfig.cellSize/cellSpacing, используя тот же "шаг
+// конвертирует их в локальные пиксели через GameConfig.colPitch/rowPitch, используя тот же "шаг
 // сетки", что и BoardView/BlockView, чтобы указывать ровно на реальные позиции ячеек.
 @ccclass('TutorialFingerView')
 export class TutorialFingerView extends Component {
@@ -50,13 +50,14 @@ export class TutorialFingerView extends Component {
             return;
         }
         this.node.active = true;
-        const pitch = this.config.cellSize + this.config.cellSpacing;
+        const colPitch = this.config.colPitch;
+        const rowPitch = this.config.rowPitch;
         // Тот же центрирующий сдвиг, что в BoardView.buildLevel()/BlockView.cellToLocal() — палец
         // должен указывать на реальную позицию ячейки, а не на смещённую (см. комментарий там).
-        const offsetX = -(this.config.gridCols * pitch) / 2;
-        const offsetY = (this.config.gridRows * pitch) / 2;
-        const from = new Vec3((fromCell.col + 0.5) * pitch + offsetX, -(fromCell.row + 0.5) * pitch + offsetY, 0);
-        const to = new Vec3((toCell.col + 0.5) * pitch + offsetX, -(toCell.row + 0.5) * pitch + offsetY, 0);
+        const offsetX = -(this.config.gridCols * colPitch) / 2;
+        const offsetY = (this.config.gridRows * rowPitch) / 2;
+        const from = new Vec3((fromCell.col + 0.5) * colPitch + offsetX, -(fromCell.row + 0.5) * rowPitch + offsetY, 0);
+        const to = new Vec3((toCell.col + 0.5) * colPitch + offsetX, -(toCell.row + 0.5) * rowPitch + offsetY, 0);
         this.node.setPosition(from);
         this.stopLoop();
         this.loopTween = tween(this.node)

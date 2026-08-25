@@ -25,16 +25,25 @@ export class BlockView extends Component {
     @property(Sprite)
     public sprite: Sprite | null = null;
 
+    // 4 запечённых кадра — длина × роль (DESIGN_UPDATE_PLAN.md §3, §4.1, §5 Шаг 4.1). Цвет уже в PNG,
+    // Sprite.color остаётся свободен под FX.
     @property(SpriteFrame)
-    public tileFrame: SpriteFrame | null = null;
+    public len2ObstFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
-    public mainFrame: SpriteFrame | null = null;
+    public len2MainFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public len3ObstFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public len3MainFrame: SpriteFrame | null = null;
 
     private blockModel: BlockModel | null = null;
-    // "Шаг сетки" (cellSize+cellSpacing одним числом), переданный из BoardView.buildLevel() — держит
-    // BlockView в той же системе координат, что и BoardView (см. комментарий там).
-    private cellPitch = 0;
+    // Шаг сетки по X/Y (GameConfig.colPitch/rowPitch — ячейка не квадратная, DESIGN_UPDATE_PLAN.md §2),
+    // переданный из BoardView.buildLevel() — держит BlockView в той же системе координат, что и BoardView.
+    private colPitch = 0;
+    private rowPitch = 0;
     private level = 1;
     // Смещение центра блока (в ячейках) вдоль его оси относительно "базовой" (col,row) ячейки —
     // считается один раз в setup(), т.к. length/axis блока не меняются в течение уровня.
@@ -65,30 +74,39 @@ export class BlockView extends Component {
         this.stopActiveTween();
     }
 
-    public setup(blockModel: BlockModel, cellPitch: number, level: number): void {
+    public setup(blockModel: BlockModel, colPitch: number, rowPitch: number, level: number): void {
         this.blockModel = blockModel;
-        this.cellPitch = cellPitch;
+        this.colPitch = colPitch;
+        this.rowPitch = rowPitch;
         this.level = level;
         this.axisCenterOffset = (blockModel.length - 1) / 2;
-        this.gridOffsetX = -((this.config?.gridCols ?? 0) * cellPitch) / 2;
-        this.gridOffsetY = ((this.config?.gridRows ?? 0) * cellPitch) / 2;
+        this.gridOffsetX = -((this.config?.gridCols ?? 0) * colPitch) / 2;
+        this.gridOffsetY = ((this.config?.gridRows ?? 0) * rowPitch) / 2;
         this.applyPosition({ col: blockModel.col, row: blockModel.row });
         if (this.sprite) {
-            this.sprite.spriteFrame = blockModel.isMain ? this.mainFrame : this.tileFrame;
+            // Sprite.type=SIMPLE, а не SLICED: арт запечён под целевую длину, растягивать по border'ам
+            // не нужно (DESIGN_UPDATE_PLAN.md §3/§5 Шаг 4.1 — закрывает бывшую 9-slice-политику).
+            this.sprite.type = Sprite.Type.SIMPLE;
+            this.sprite.spriteFrame = this.pickSpriteFrame(blockModel);
         }
-        // Визуальный размер вдоль оси растёт с length (9-slice не искажает углы); поперёк оси блок
-        // всегда занимает ровно одну ячейку. spacing вычитается один раз, т.к. cellPitch уже включает
-        // зазор после каждой ячейки, а последняя занятая ячейка блока зазора после себя не добавляет.
+        // Художник нарисовал только вертикальный арт (решение 0.3, §4.1): горизонтальные блоки — тот
+        // же кадр, повёрнутый на 90°. Размер задаём в "довращательных" терминах — ширина/высота
+        // поменяны местами для horizontal, — чтобы ПОСЛЕ поворота на экране получилось ровно
+        // length*pitch вдоль оси блока и pitch поперёк неё (DESIGN_UPDATE_PLAN.md §5 Шаг 4.1).
         const uiTransform = this.node.getComponent(UITransform);
         if (uiTransform) {
-            const spacing = this.config?.cellSpacing ?? 0;
-            const span = blockModel.length * cellPitch - spacing;
-            const cross = cellPitch - spacing;
-            uiTransform.setContentSize(
-                blockModel.axis === 'horizontal' ? span : cross,
-                blockModel.axis === 'horizontal' ? cross : span,
-            );
+            const along = blockModel.axis === 'horizontal' ? blockModel.length * colPitch : blockModel.length * rowPitch;
+            const across = blockModel.axis === 'horizontal' ? rowPitch : colPitch;
+            uiTransform.setContentSize(across, along);
         }
+        this.node.angle = blockModel.axis === 'horizontal' ? -90 : 0;
+    }
+
+    private pickSpriteFrame(blockModel: BlockModel): SpriteFrame | null {
+        if (blockModel.length >= 3) {
+            return blockModel.isMain ? this.len3MainFrame : this.len3ObstFrame;
+        }
+        return blockModel.isMain ? this.len2MainFrame : this.len2ObstFrame;
     }
 
     private cellToLocal(cell: GridCell): Vec3 {
@@ -97,12 +115,12 @@ export class BlockView extends Component {
             return new Vec3();
         }
         if (model.axis === 'horizontal') {
-            const x = (cell.col + this.axisCenterOffset + 0.5) * this.cellPitch + this.gridOffsetX;
-            const y = -(cell.row + 0.5) * this.cellPitch + this.gridOffsetY;
+            const x = (cell.col + this.axisCenterOffset + 0.5) * this.colPitch + this.gridOffsetX;
+            const y = -(cell.row + 0.5) * this.rowPitch + this.gridOffsetY;
             return new Vec3(x, y, 0);
         }
-        const x = (cell.col + 0.5) * this.cellPitch + this.gridOffsetX;
-        const y = -(cell.row + this.axisCenterOffset + 0.5) * this.cellPitch + this.gridOffsetY;
+        const x = (cell.col + 0.5) * this.colPitch + this.gridOffsetX;
+        const y = -(cell.row + this.axisCenterOffset + 0.5) * this.rowPitch + this.gridOffsetY;
         return new Vec3(x, y, 0);
     }
 
@@ -145,11 +163,17 @@ export class BlockView extends Component {
     public driveToExit(): void {
         this.stopActiveTween();
         const duration = this.config?.mainDriveDuration ?? 0.7;
-        const uiTransform = this.node.getComponent(UITransform);
-        // Проезд за край поля: 6 ячеек вправо с запасом на собственную ширину ноды, чтобы блок
-        // полностью скрылся за правым краем видимой области, а не просто доехал до него.
-        const exitDistance = this.cellPitch * 6 + (uiTransform?.width ?? this.cellPitch);
+        // Визуальная ширина на экране (после поворота — UITransform.width её больше не отражает,
+        // содержимое довращательное, см. setup()): горизонтальный блок растянут на length*colPitch,
+        // вертикальный занимает один шаг сетки поперёк оси.
+        const model = this.blockModel;
+        const visualWidth = model && model.axis === 'horizontal' ? model.length * this.colPitch : this.colPitch;
+        // Правый край внутреннего поля платы в локальных координатах контейнера: gridOffsetX
+        // центрирует сетку, так что край ровно в половине полной ширины сетки (DESIGN_UPDATE_PLAN.md
+        // §4.1 — дистанция от правого края inner rect, а не захардкоженное число ячеек).
+        const rightEdgeX = ((this.config?.gridCols ?? 0) * this.colPitch) / 2;
         const current = this.node.position;
+        const exitDistance = rightEdgeX - current.x + visualWidth;
         const target = new Vec3(current.x + exitDistance, current.y, current.z);
         this.activeTween = tween(this.node)
             .to(duration, { position: target })

@@ -5,6 +5,13 @@ const { ccclass } = _decorator;
 // Простая идле-подсказка направления выхода (ARCHITECTURE.md §3). Не завязана на конкретное событие
 // (IMPLEMENTATION_PHASES §Фаза 3 п.7 — оставить простой continuous pulse допустимо) — пульсирует
 // непрерывно с момента появления ноды в сцене.
+//
+// DESIGN_UPDATE_PLAN.md §4.7/§5.4: раньше вырез рамки и стрелка были одним запечённым артом на одной
+// ноде, поэтому пульс всей ноды двигал их вместе. Теперь это раздельные ассеты — статичная накладка
+// `art/board/exit_notch.png` (нода `ExitNotch`) и `art/board/exit_arrows.png` (нода `ExitArrows`,
+// сиблинг ExitNotch, см. SCENE_SETUP.md) — с этим компонентом строго на ноде `ExitArrows`. Пульс
+// `this.node` масштабирует только стрелки; накладка выреза как отдельная сиблинг-нода в это
+// масштабирование не попадает.
 @ccclass('ExitArrowView')
 export class ExitArrowView extends Component {
     private loopTween: Tween<Node> | null = null;
