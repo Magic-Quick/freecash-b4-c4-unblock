@@ -13,15 +13,15 @@ import {
     MainDriveStartEvent,
     EVT_MAIN_REACHED_EXIT,
     MainReachedExitEvent,
-    EVT_COINS_CHANGED,
-    CoinsChangedEvent,
+    EVT_BLOCK_UNDONE,
+    BlockUndoneEvent,
 } from '../event-bus/events';
 
 const { ccclass, property } = _decorator;
 
 // Реализация из AUDIO_GENERATION_PLAN.md §7 — SoundSystem сам транслирует доменные EVT_* в SFX
 // (Views не знают о звуковых ID). `playOneShot` не прерывает уже играющий клип — совпавшие по времени
-// exit_whoosh/coin_fly не обрежут друг друга (AUDIO_GENERATION_PLAN.md §8).
+// клипы не обрежут друг друга (AUDIO_GENERATION_PLAN.md §8).
 @ccclass('SoundSystem')
 export class SoundSystem extends Component {
     @property(GameConfig)
@@ -45,9 +45,6 @@ export class SoundSystem extends Component {
     @property(AudioClip)
     private exitWhooshClip: AudioClip | null = null;
 
-    @property(AudioClip)
-    private coinFlyClip: AudioClip | null = null;
-
     private lastBlockSlideAt = 0;
     private lastBlockBlockedAt = 0;
 
@@ -56,7 +53,7 @@ export class SoundSystem extends Component {
     private readonly _onMainPathClear = this.onMainPathClear.bind(this);
     private readonly _onMainDriveStart = this.onMainDriveStart.bind(this);
     private readonly _onMainReachedExit = this.onMainReachedExit.bind(this);
-    private readonly _onCoinsChanged = this.onCoinsChanged.bind(this);
+    private readonly _onBlockUndone = this.onBlockUndone.bind(this);
 
     protected onLoad(): void {
         GlobalEventBus.subscribe<BlockMovedEvent>(EVT_BLOCK_MOVED, this._onBlockMoved);
@@ -64,7 +61,7 @@ export class SoundSystem extends Component {
         GlobalEventBus.subscribe<MainPathClearEvent>(EVT_MAIN_PATH_CLEAR, this._onMainPathClear);
         GlobalEventBus.subscribe<MainDriveStartEvent>(EVT_MAIN_DRIVE_START, this._onMainDriveStart);
         GlobalEventBus.subscribe<MainReachedExitEvent>(EVT_MAIN_REACHED_EXIT, this._onMainReachedExit);
-        GlobalEventBus.subscribe<CoinsChangedEvent>(EVT_COINS_CHANGED, this._onCoinsChanged);
+        GlobalEventBus.subscribe<BlockUndoneEvent>(EVT_BLOCK_UNDONE, this._onBlockUndone);
     }
 
     protected onDestroy(): void {
@@ -73,7 +70,7 @@ export class SoundSystem extends Component {
         GlobalEventBus.unsubscribe<MainPathClearEvent>(EVT_MAIN_PATH_CLEAR, this._onMainPathClear);
         GlobalEventBus.unsubscribe<MainDriveStartEvent>(EVT_MAIN_DRIVE_START, this._onMainDriveStart);
         GlobalEventBus.unsubscribe<MainReachedExitEvent>(EVT_MAIN_REACHED_EXIT, this._onMainReachedExit);
-        GlobalEventBus.unsubscribe<CoinsChangedEvent>(EVT_COINS_CHANGED, this._onCoinsChanged);
+        GlobalEventBus.unsubscribe<BlockUndoneEvent>(EVT_BLOCK_UNDONE, this._onBlockUndone);
     }
 
     private onBlockMoved(_event: BlockMovedEvent): void {
@@ -112,8 +109,19 @@ export class SoundSystem extends Component {
         this.play(this.exitWhooshClip);
     }
 
-    private onCoinsChanged(_event: CoinsChangedEvent): void {
-        this.play(this.coinFlyClip);
+    // Undo — тот же слайд-звук, что и обычный ход, с тем же анти-спам гейтом (DESIGN_UPDATE_PLAN.md
+    // §8.2 п.4 требует отдельную подписку на EVT_BLOCK_UNDONE вместо EVT_BLOCK_MOVED — счётчик ходов
+    // считает их раздельно, но с точки зрения звука откат блока и обычный сдвиг неотличимы).
+    private onBlockUndone(_event: BlockUndoneEvent): void {
+        if (!this.config) {
+            return;
+        }
+        const now = Date.now();
+        if (now - this.lastBlockSlideAt < this.config.sfxBlockSlideMinInterval * 1000) {
+            return;
+        }
+        this.lastBlockSlideAt = now;
+        this.play(this.blockSlideClip);
     }
 
     // Замьюченный контейнер (start_muted) и явный plbx.is_audio()=false должны молчать без исключений —

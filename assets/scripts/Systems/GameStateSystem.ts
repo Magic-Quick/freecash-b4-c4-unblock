@@ -1,10 +1,11 @@
 import { _decorator, Component } from 'cc';
+import { GameConfig } from '../Core/GameConfig';
 import { GameStateModel } from '../Models/GameStateModel';
 import { GamePhase } from '../Models/GamePhase';
 import { GlobalEventBus } from '../event-bus/event-bus';
 import {
-    EVT_REWARD_SEQUENCE_DONE,
-    RewardSequenceDoneEvent,
+    EVT_LEVEL_SOLVED,
+    LevelSolvedEvent,
     EVT_PHASE_CHANGED,
     PhaseChangedEvent,
     EVT_LEVEL_STARTED,
@@ -13,23 +14,26 @@ import {
     RequestCtaEvent,
 } from '../event-bus/events';
 
-const { ccclass } = _decorator;
+const { ccclass, property } = _decorator;
 
 // Держит единственный экземпляр GameStateModel на сессию (ARCHITECTURE.md §2) и раздаёт его другим
 // системам через статический аксессор — System-компоненты не связаны @property-ссылками друг с другом
 // (ARCHITECTURE.md §5 перечисляет только ссылки System→View), а GameStateModel — общий plain-контракт.
 @ccclass('GameStateSystem')
 export class GameStateSystem extends Component {
+    @property(GameConfig)
+    private config: GameConfig | null = null;
+
     private static readonly _model: GameStateModel = new GameStateModel();
 
     public static get model(): GameStateModel {
         return GameStateSystem._model;
     }
 
-    private readonly _onRewardSequenceDone = this.onRewardSequenceDone.bind(this);
+    private readonly _onLevelSolved = this.onLevelSolved.bind(this);
 
     protected onLoad(): void {
-        GlobalEventBus.subscribe<RewardSequenceDoneEvent>(EVT_REWARD_SEQUENCE_DONE, this._onRewardSequenceDone);
+        GlobalEventBus.subscribe<LevelSolvedEvent>(EVT_LEVEL_SOLVED, this._onLevelSolved);
     }
 
     protected start(): void {
@@ -43,25 +47,21 @@ export class GameStateSystem extends Component {
     }
 
     protected onDestroy(): void {
-        GlobalEventBus.unsubscribe<RewardSequenceDoneEvent>(EVT_REWARD_SEQUENCE_DONE, this._onRewardSequenceDone);
+        GlobalEventBus.unsubscribe<LevelSolvedEvent>(EVT_LEVEL_SOLVED, this._onLevelSolved);
     }
 
-    private onRewardSequenceDone(event: RewardSequenceDoneEvent): void {
+    // Единственный уровень (DESIGN_UPDATE_PLAN.md §4.2) — решённый уровень ведёт прямо в CTA, ветки
+    // "следующий уровень" больше нет. Пауза winFxDuration держит место, где раньше ждали долёт монет.
+    private onLevelSolved(): void {
         const model = GameStateSystem._model;
-        if (!event.isFinal) {
-            // L1 полностью долетел (монеты + FX) — переходим на L2 (AGENTS.md §4, Фаза 0 handoff).
-            model.currentLevel = 2;
-            model.phase = GamePhase.LEVEL_PLAY;
-            GlobalEventBus.publish<PhaseChangedEvent>(EVT_PHASE_CHANGED, { phase: model.phase });
-            GlobalEventBus.publish<LevelStartedEvent>(EVT_LEVEL_STARTED, { level: 2 });
-            return;
-        }
-        // L2 завершён — единственный переход в CTA за сессию.
         if (!model.tryRequestCta()) {
             return;
         }
-        model.phase = GamePhase.CTA;
-        GlobalEventBus.publish<PhaseChangedEvent>(EVT_PHASE_CHANGED, { phase: model.phase });
-        GlobalEventBus.publish<RequestCtaEvent>(EVT_REQUEST_CTA, { totalFc: model.totalCoins });
+        const delay = this.config?.winFxDuration ?? 0;
+        this.scheduleOnce(() => {
+            model.phase = GamePhase.CTA;
+            GlobalEventBus.publish<PhaseChangedEvent>(EVT_PHASE_CHANGED, { phase: model.phase });
+            GlobalEventBus.publish<RequestCtaEvent>(EVT_REQUEST_CTA, {});
+        }, delay);
     }
 }

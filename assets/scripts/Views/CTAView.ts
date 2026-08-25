@@ -28,9 +28,6 @@ export class CTAView extends Component {
     @property(Label)
     public titleLabel: Label | null = null;
 
-    @property(Label)
-    public fcLabel: Label | null = null;
-
     @property(Button)
     public playButton: Button | null = null;
 
@@ -50,20 +47,17 @@ export class CTAView extends Component {
         this.stopPulse();
     }
 
-    private onRequestCta(event: RequestCtaEvent): void {
-        this.show(event.totalFc);
+    private onRequestCta(_event: RequestCtaEvent): void {
+        this.show();
     }
 
-    public show(totalFc: number): void {
+    public show(): void {
         // `CTAOverlay` (this.node) сам активен с запуска сцены — скрыты только визуальные дети.
         if (this.dimNode) {
             this.dimNode.active = true;
         }
         if (this.panelNode) {
             this.panelNode.active = true;
-        }
-        if (this.fcLabel) {
-            this.fcLabel.string = `${totalFc}`;
         }
         // Терминальное состояние геймплея — ровно здесь, на показе CTA (см. комментарий класса).
         Playbox.game_end();
