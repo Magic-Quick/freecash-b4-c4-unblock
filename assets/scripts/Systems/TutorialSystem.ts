@@ -1,6 +1,8 @@
 import { _decorator, Component } from 'cc';
 import { GameConfig } from '../Core/GameConfig';
 import { LevelsDataFile } from '../Models/BoardModel';
+import { BlockModel } from '../Models/BlockModel';
+import { BoardSnapshot, BoardSolver } from '../Models/BoardSolver';
 import { GlobalEventBus } from '../event-bus/event-bus';
 import {
     EVT_LEVEL_STARTED,
@@ -11,14 +13,17 @@ import {
     TutorialShowEvent,
     EVT_TUTORIAL_HIDE,
     TutorialHideEvent,
-    GridCell,
 } from '../event-bus/events';
 
 const { ccclass, property } = _decorator;
 
-// Простая подсказка «какой блок сдвинуть первым» (ARCHITECTURE.md §2/§3). Цель не «идеальный решатель»,
-// а один разумный, полностью data-driven хинт — координаты берутся из levels.json на каждый уровень
-// заново, никаких захардкоженных ячеек (AGENTS.md §2).
+// Подсказка туториала — первый ход оптимального решения BoardSolver, а не наводящая догадка
+// (DESIGN_UPDATE_PLAN.md §5 Шаг 3.4). Снапшот стартовой раскладки строится напрямую из levels.json,
+// а не через BoardSystem.getSnapshot(): на EVT_LEVEL_STARTED порядок вызова подписчиков EventBus не
+// гарантирован (см. event-bus.ts — Set хранит insertion order), поэтому опираться на то, что
+// BoardSystem успеет перестроить своё состояние раньше TutorialSystem, нельзя. Раскладка на старте
+// уровня (в т.ч. при рестарте) всегда совпадает с levels.json, так что это тот же снапшот, что и у
+// BoardSystem в этот момент.
 @ccclass('TutorialSystem')
 export class TutorialSystem extends Component {
     @property(GameConfig)
@@ -37,6 +42,9 @@ export class TutorialSystem extends Component {
         GlobalEventBus.unsubscribe<BlockMovedEvent>(EVT_BLOCK_MOVED, this._onBlockMoved);
     }
 
+    // EVT_LEVEL_STARTED приходит и на первый старт, и повторно на рестарт (BoardSystem.onRestartRequest
+    // republish-ит его целиком) — оба раза пересчитывает и показывает подсказку заново, никакой
+    // отдельной подписки на EVT_RESTART_REQUEST не нужно (DESIGN_UPDATE_PLAN.md §5 Шаг 3.4).
     private onLevelStarted(event: LevelStartedEvent): void {
         const hint = this.computeHint(event.level);
         if (hint) {
@@ -47,12 +55,14 @@ export class TutorialSystem extends Component {
     }
 
     private onBlockMoved(): void {
-        // Игрок уже сделал ход — подсказка больше не нужна (эвристика Фазы 2, уточнение — Фаза 3).
+        // Игрок уже сделал ход — подсказка больше не нужна.
         GlobalEventBus.publish<TutorialHideEvent>(EVT_TUTORIAL_HIDE, {});
     }
 
-    // Берёт первый не-главный блок из данных уровня и предлагает сдвинуть его на одну ячейку в сторону
-    // свободного края по его же оси — не «решение», а простая наводящая подсказка.
+    // Строит снапшот стартовой раскладки уровня из levels.json и спрашивает BoardSolver о первом ходе
+    // оптимального решения — той же семантики «до упора» (DESIGN_UPDATE_PLAN.md §1.2), что и сам
+    // свайп, поэтому подсказка всегда воспроизводима игроком. null, если солвер не нашёл хода (путь
+    // уже свободен либо раскладка не описана в levels.json) — тогда подсказку скрываем.
     private computeHint(level: number): TutorialShowEvent | null {
         if (!this.config || !this.config.levelsData) {
             return null;
@@ -62,17 +72,17 @@ export class TutorialSystem extends Component {
         if (!levelData) {
             return null;
         }
-        const target = levelData.blocks.find((block) => !block.isMain);
-        if (!target) {
+        const blocks: BlockModel[] = levelData.blocks.map((block) => ({ ...block }));
+        const snapshot: BoardSnapshot = {
+            cols: this.config.gridCols,
+            rows: this.config.gridRows,
+            exitRow: levelData.exitRow,
+            blocks,
+        };
+        const move = BoardSolver.solve(snapshot);
+        if (!move) {
             return null;
         }
-        const fromCell: GridCell = { col: target.col, row: target.row };
-        let toCell: GridCell;
-        if (target.axis === 'vertical') {
-            toCell = target.row > 0 ? { col: target.col, row: target.row - 1 } : { col: target.col, row: target.row + 1 };
-        } else {
-            toCell = target.col > 0 ? { col: target.col - 1, row: target.row } : { col: target.col + 1, row: target.row };
-        }
-        return { fromCell, toCell };
+        return { fromCell: move.fromCell, toCell: move.toCell };
     }
 }

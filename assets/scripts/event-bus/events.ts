@@ -56,13 +56,6 @@ export interface PhaseChangedEvent {
     phase: GamePhase;
 }
 
-export const EVT_COINS_CHANGED = 'EVT_COINS_CHANGED';
-export interface CoinsChangedEvent {
-    total: number;
-    delta: number;
-    isFinal: boolean;
-}
-
 export const EVT_TUTORIAL_SHOW = 'EVT_TUTORIAL_SHOW';
 export interface TutorialShowEvent {
     fromCell: GridCell;
@@ -73,9 +66,7 @@ export const EVT_TUTORIAL_HIDE = 'EVT_TUTORIAL_HIDE';
 export interface TutorialHideEvent {}
 
 export const EVT_REQUEST_CTA = 'EVT_REQUEST_CTA';
-export interface RequestCtaEvent {
-    totalFc: number;
-}
+export interface RequestCtaEvent {}
 
 export const EVT_PLAY_SOUND = 'EVT_PLAY_SOUND';
 export interface PlaySoundEvent {
@@ -85,10 +76,48 @@ export interface PlaySoundEvent {
 export const EVT_TAP = 'EVT_TAP';
 export interface TapEvent {}
 
-// Добавлено на Фазе 0: GameStateSystem слушает именно это событие, а не сырой EVT_LEVEL_SOLVED,
-// чтобы FX награды (fly-in монет) L1 гарантированно долетел до старта L2 (см. ARCHITECTURE.md §2).
-export const EVT_REWARD_SEQUENCE_DONE = 'EVT_REWARD_SEQUENCE_DONE';
-export interface RewardSequenceDoneEvent {
-    level: number;
-    isFinal: boolean;
+// Добавлено DESIGN_UPDATE_PLAN.md §5 Шаг 3.2/3.6 — нижний бар просит отменить последний ход;
+// BoardSystem гейтит запрос через GameStateModel.canAcceptInput() (§8.2 п.1), как и EVT_SWIPE.
+export const EVT_UNDO_REQUEST = 'EVT_UNDO_REQUEST';
+export interface UndoRequestEvent {}
+
+// Нижний бар просит перезапустить уровень с начала — тот же гейт canAcceptInput(), что и undo.
+export const EVT_RESTART_REQUEST = 'EVT_RESTART_REQUEST';
+export interface RestartRequestEvent {}
+
+// Отдельное от EVT_BLOCK_MOVED событие для отката хода (DESIGN_UPDATE_PLAN.md §8.2 п.4) — на
+// EVT_BLOCK_MOVED подписаны TutorialSystem/SoundSystem/счётчик ходов, откат через него увеличил бы
+// счётчик вместо уменьшения. fromCell/toCell зеркалят исходный ход: toCell — куда блок возвращается.
+export const EVT_BLOCK_UNDONE = 'EVT_BLOCK_UNDONE';
+export interface BlockUndoneEvent {
+    blockId: number;
+    fromCell: GridCell;
+    toCell: GridCell;
+}
+
+// Публикуется BoardSystem на каждое изменение счётчика ходов (ход/undo/restart) — источник для
+// MovesView (DESIGN_UPDATE_PLAN.md §5 Шаг 4.5).
+export const EVT_MOVES_CHANGED = 'EVT_MOVES_CHANGED';
+export interface MovesChangedEvent {
+    moves: number;
+}
+
+// Нижний бар просит подсказку — гейтится тем же canAcceptInput(), что и EVT_SWIPE/UNDO/RESTART
+// (DESIGN_UPDATE_PLAN.md §8.2 п.1). Обрабатывается HintSystem (§5 Шаг 3.3).
+export const EVT_HINT_REQUEST = 'EVT_HINT_REQUEST';
+export interface HintRequestEvent {}
+
+// Публикуется HintSystem только когда BoardSolver.solve() вернул реальный ход (путь ещё не свободен) —
+// подсветка блока + направление хода, которое игрок физически сможет воспроизвести свайпом (§1.2).
+export const EVT_HINT_SHOW = 'EVT_HINT_SHOW';
+export interface HintShowEvent {
+    blockId: number;
+    dir: 'up' | 'down' | 'left' | 'right';
+}
+
+// Публикуется HintSystem на каждое изменение остатка подсказок — источник для badge на кнопке hint
+// в BottomBarView (DESIGN_UPDATE_PLAN.md §5 Шаг 4.6).
+export const EVT_HINTS_CHANGED = 'EVT_HINTS_CHANGED';
+export interface HintsChangedEvent {
+    hints: number;
 }
