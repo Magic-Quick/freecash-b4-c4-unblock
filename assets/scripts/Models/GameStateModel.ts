@@ -1,23 +1,21 @@
 import { GamePhase } from './GamePhase';
 
-// Plain-модель сессии: текущий уровень, фаза, накопленные монеты и single-fire guards.
-// Guards централизованы здесь (а не в каждой System), чтобы правило «drive/reward/CTA —
-// максимум один раз на уровень/сессию» (AGENTS.md §4, IMPLEMENTATION_PHASES Фаза 1 п.6) имело одну точку правды.
+// Plain-модель сессии: единственный уровень (DESIGN_UPDATE_PLAN.md решение 0.2 — монеты/FC отменены
+// решением 0.3), фаза, счётчик ходов и single-fire guards. Guards централизованы здесь (а не в каждой
+// System), чтобы правило «drive/CTA — максимум один раз на уровень/сессию» (AGENTS.md §4,
+// IMPLEMENTATION_PHASES Фаза 1 п.6) имело одну точку правды.
 export class GameStateModel {
-    private _currentLevel: 1 | 2 = 1;
+    // Уровень один (DESIGN_UPDATE_PLAN.md §5 Шаг 2.4) — id из levels.json, не переключается за сессию.
+    // Свойство остаётся read-only (не setter), чтобы DriveSystem.onMainPathClear() читал его без изменений.
+    private readonly _currentLevel = 1;
     private _phase: GamePhase = GamePhase.INTRO;
-    private _totalCoins = 0;
+    private _moves = 0;
 
     private readonly _driveFiredForLevel: Set<number> = new Set();
-    private readonly _rewardFiredForLevel: Set<number> = new Set();
     private _ctaRequested = false;
 
-    public get currentLevel(): 1 | 2 {
+    public get currentLevel(): number {
         return this._currentLevel;
-    }
-
-    public set currentLevel(level: 1 | 2) {
-        this._currentLevel = level;
     }
 
     public get phase(): GamePhase {
@@ -28,13 +26,25 @@ export class GameStateModel {
         this._phase = phase;
     }
 
-    public get totalCoins(): number {
-        return this._totalCoins;
+    public get moves(): number {
+        return this._moves;
     }
 
-    public addCoins(amount: number): number {
-        this._totalCoins += amount;
-        return this._totalCoins;
+    // Каждый успешный ход (BoardSystem, после push в стек истории) увеличивает счётчик.
+    public incrementMoves(): number {
+        this._moves += 1;
+        return this._moves;
+    }
+
+    // Undo уменьшает счётчик обратно — после N ходов и N undo счётчик равен нулю (DESIGN_UPDATE_PLAN.md §3 gate).
+    public decrementMoves(): number {
+        this._moves = Math.max(0, this._moves - 1);
+        return this._moves;
+    }
+
+    // Restart обнуляет счётчик вместе с остальным уровневым состоянием (DESIGN_UPDATE_PLAN.md §8.2 п.6).
+    public resetMoves(): void {
+        this._moves = 0;
     }
 
     // Ввод (свайпы) принимается только в LEVEL_PLAY — единственная проверка фазы для входящего EVT_SWIPE.
@@ -51,16 +61,7 @@ export class GameStateModel {
         return true;
     }
 
-    // Guard: награда начисляется не более одного раза на уровень.
-    public tryGrantReward(level: number): boolean {
-        if (this._rewardFiredForLevel.has(level)) {
-            return false;
-        }
-        this._rewardFiredForLevel.add(level);
-        return true;
-    }
-
-    // Guard: CTA запрашивается не более одного раза за сессию (только после L2).
+    // Guard: CTA запрашивается не более одного раза за сессию.
     public tryRequestCta(): boolean {
         if (this._ctaRequested) {
             return false;

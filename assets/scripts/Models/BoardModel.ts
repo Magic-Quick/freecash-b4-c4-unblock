@@ -1,15 +1,23 @@
 import { BlockModel } from './BlockModel';
 
-// Одна раскладка уровня — как она приходит из levels.json (level, reward, exitRow, exitSide, blocks[]).
+// Сложность уровня для HUD (DESIGN_UPDATE_PLAN.md §5 Шаг 2.2): звёзды + подпись, из levels.json.
+export interface LevelDifficulty {
+    stars: number;
+    label: string;
+}
+
+// Одна раскладка уровня — как она приходит из levels.json (level, difficulty, exitRow, exitSide,
+// blocks[]). Награды отменены (DESIGN_UPDATE_PLAN.md решение 0.3) — поля reward больше нет.
 export interface LevelData {
     level: number;
-    reward: number;
+    difficulty: LevelDifficulty;
     exitRow: number;
     exitSide: 'right';
     blocks: BlockModel[];
 }
 
-// Корень levels.json: массив раскладок L1/L2 (и далее, без изменения BoardSystem — см. IMPLEMENTATION_PHASES §Фаза 0).
+// Корень levels.json: массив раскладок. Один уровень (DESIGN_UPDATE_PLAN.md решение 0.2), схема
+// оставлена массивом, чтобы не менять BoardSystem при появлении новых раскладок.
 export interface LevelsDataFile {
     levels: LevelData[];
 }
