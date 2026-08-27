@@ -107,14 +107,6 @@ export interface MovesChangedEvent {
 export const EVT_HINT_REQUEST = 'EVT_HINT_REQUEST';
 export interface HintRequestEvent {}
 
-// Публикуется HintSystem только когда BoardSolver.solve() вернул реальный ход (путь ещё не свободен) —
-// подсветка блока + направление хода, которое игрок физически сможет воспроизвести свайпом (§1.2).
-export const EVT_HINT_SHOW = 'EVT_HINT_SHOW';
-export interface HintShowEvent {
-    blockId: number;
-    dir: 'up' | 'down' | 'left' | 'right';
-}
-
 // Публикуется HintSystem на каждое изменение остатка подсказок — источник для badge на кнопке hint
 // в BottomBarView (DESIGN_UPDATE_PLAN.md §5 Шаг 4.6).
 export const EVT_HINTS_CHANGED = 'EVT_HINTS_CHANGED';

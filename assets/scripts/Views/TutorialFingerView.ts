@@ -19,7 +19,10 @@ export class TutorialFingerView extends Component {
     @property(GameConfig)
     public config: GameConfig | null = null;
 
-    private loopTween: Tween<Node> | null = null;
+    // Заход в кадр (entrance) и петля тапа (pulse) — разные твины: entrance завершается один раз и
+    // передаёт эстафету pulse через .call(), stopLoop() гасит оба разом, каким бы ни застали hide().
+    private entranceTween: Tween<Node> | null = null;
+    private pulseTween: Tween<Node> | null = null;
 
     private readonly _onShow = this.onShow.bind(this);
     private readonly _onHide = this.onHide.bind(this);
@@ -67,16 +70,25 @@ export class TutorialFingerView extends Component {
         const dirVec = new Vec3(to.x - from.x, to.y - from.y, 0).normalize();
         const tapOffset = Math.min(colPitch, rowPitch) * 0.25;
         const tapPoint = new Vec3(from.x + dirVec.x * tapOffset, from.y + dirVec.y * tapOffset, 0);
-        this.node.setPosition(tapPoint);
-        this.node.setScale(1, 1, 1);
         this.stopLoop();
+        // Вход в кадр вдоль dirVec — палец подъезжает к точке тапа с той стороны, куда двинется блок,
+        // так что само движение входа уже показывает направление свайпа, а не произвольный slide-in.
+        const entranceDistance = Math.min(colPitch, rowPitch) * 0.8;
+        const entryPoint = new Vec3(tapPoint.x - dirVec.x * entranceDistance, tapPoint.y - dirVec.y * entranceDistance, 0);
+        this.node.setPosition(entryPoint);
+        this.node.setScale(0.6, 0.6, 1);
         const pressScale = 0.82;
-        this.loopTween = tween(this.node)
-            .to(0.15, { scale: new Vec3(pressScale, pressScale, 1) })
-            .to(0.15, { scale: new Vec3(1, 1, 1) })
-            .delay(0.4)
-            .union()
-            .repeatForever()
+        this.entranceTween = tween(this.node)
+            .to(0.25, { position: tapPoint, scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
+            .call(() => {
+                this.pulseTween = tween(this.node)
+                    .to(0.15, { scale: new Vec3(pressScale, pressScale, 1) })
+                    .to(0.15, { scale: new Vec3(1, 1, 1) })
+                    .delay(0.4)
+                    .union()
+                    .repeatForever()
+                    .start();
+            })
             .start();
     }
 
@@ -86,9 +98,13 @@ export class TutorialFingerView extends Component {
     }
 
     private stopLoop(): void {
-        if (this.loopTween) {
-            this.loopTween.stop();
-            this.loopTween = null;
+        if (this.entranceTween) {
+            this.entranceTween.stop();
+            this.entranceTween = null;
+        }
+        if (this.pulseTween) {
+            this.pulseTween.stop();
+            this.pulseTween = null;
         }
     }
 }

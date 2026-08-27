@@ -9,8 +9,8 @@ import {
     LevelStartedEvent,
     EVT_HINT_REQUEST,
     HintRequestEvent,
-    EVT_HINT_SHOW,
-    HintShowEvent,
+    EVT_TUTORIAL_SHOW,
+    TutorialShowEvent,
     EVT_HINTS_CHANGED,
     HintsChangedEvent,
 } from '../event-bus/events';
@@ -77,7 +77,10 @@ export class HintSystem extends Component {
             return;
         }
         this.hintsRemaining -= 1;
-        GlobalEventBus.publish<HintShowEvent>(EVT_HINT_SHOW, { blockId: move.blockId, dir: move.dir });
+        // Тот же визуал, что и автоподсказка перед первым ходом (TutorialSystem/TutorialFingerView) —
+        // палец на fromCell→toCell хода, а не отдельный неотрисовываемый EVT_HINT_SHOW (blockId/dir
+        // без позиций никто не слушал, кнопка молча тратила подсказку без визуального отклика).
+        GlobalEventBus.publish<TutorialShowEvent>(EVT_TUTORIAL_SHOW, { fromCell: move.fromCell, toCell: move.toCell });
         GlobalEventBus.publish<HintsChangedEvent>(EVT_HINTS_CHANGED, { hints: this.hintsRemaining });
     }
 }
