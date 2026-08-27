@@ -25,6 +25,13 @@
 детьми `ExitNotch`/`ExitArrows`, `TutorialLayer` с `Finger`), обязано стоять **в той же точке, что и
 `BoardFrame`** — центр платы. Сейчас это `(0, 20)` внутри `GameplayLayer`/`BoardArea`.
 
+## Шрифт
+
+Единственный шрифт проекта — **Luckiest Guy**, `assets/LuckiestGuy-Regular.ttf` (Luckiest Guy, 58 KB). Все `cc.Label` сцены (10 шт.)
+стоят на нём: `_font` = этот ассет, `_isSystemFontUsed = false`, `_isBold = false` (начертание само по
+себе жирное — синтетический bold Cocos только мылит контур). Новых надписей на системном Arial быть не
+должно.
+
 ## Целевая иерархия
 ```
 Canvas
