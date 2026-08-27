@@ -45,8 +45,9 @@ Canvas
 │   │   │                      difficulty.stars=1) + DifficultyLabel "Beginner")            [HudView]
 │   │   ├── ChevronNext       (chevron_next.png — чистый декор, без функции; уровень один, §8.6 плана —
 │   │   │                      НЕ вешать переход между уровнями)
-│   │   └── MovesPanel        (panel.png; "Moves" + MovesLabel(live) + "Record" + RecordLabel("52",
-│   │                          статичный декор, §8.5 плана — не менять и не оживлять)          [MovesView]
+│   │   └── MovesPanel        (panel.png; "Moves" + MovesLabel(live) + RecordTitleLabel("Record: 52" —
+│   │                          статичный декор ОДНОЙ строкой, §8.5 плана: не менять, не оживлять и
+│   │                          НЕ разбивать на подпись+значение)                              [MovesView]
 │   ├── GameplayLayer         (центр)
 │   │   ├── BoardFrame        (Sprite art/board/Board_full.png 755×679 @ contentSize 640×600,
 │   │   │                      type=SIMPLE, sizeMode=CUSTOM, trimmedMode=false — сетка И карман выхода
@@ -137,8 +138,7 @@ Canvas
 | `BoardView.exitNotch` | `.../GameplayLayer/Board/ExitNotch` (active=false при Board_full.png) |
 | `BoardView.exitArrows` | `.../GameplayLayer/Board/ExitArrows` (ExitArrowView) |
 | `HudView.difficultyLabel` | `.../HudLayer/LevelPanel/DifficultyLabel` (Label) |
-| `MovesView.movesLabel` | `.../HudLayer/MovesPanel/MovesLabel` (Label) |
-| `MovesView.recordLabel` | `.../HudLayer/MovesPanel/RecordLabel` (Label) — статика §8.5, не пересчитывается |
+| `MovesView.movesLabel` | `.../HudLayer/MovesPanel/MovesLabel` (Label) — единственная ссылка MovesView |
 | `BottomBarView.restartButton` | `.../BottomBar/RestartButton` (Button) |
 | `BottomBarView.undoButton` | `.../BottomBar/UndoButton` (Button) |
 | `BottomBarView.hintButton` | `.../BottomBar/HintButton` (Button) |

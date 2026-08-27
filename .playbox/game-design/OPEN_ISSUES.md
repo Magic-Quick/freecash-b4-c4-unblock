@@ -215,7 +215,8 @@ max(screenW/1376, screenH/768)` (cover) — на портрете это фит-
   (+ удалена устаревшая нода `GameplayLayer/ExitArrow` и её `ExitArrowView`/`exit_arrow.png` — по
   `SCENE_SETUP.md` целевая иерархия несёт только `ExitNotch`/`ExitArrows`, старой ноды там нет, а
   `BoardView.exitArrow` явно значится как «заменён» в разделе «Удалено из wiring»), `HudView.difficultyLabel`,
-  `MovesView` добавлен на `MovesPanel` (`config`/`movesLabel`/`recordLabel`), `BottomBarView` добавлен на
+  `MovesView` добавлен на `MovesPanel` (`config`/`movesLabel`/`recordLabel` — два последних удалены
+  2026-08-27 как мёртвый код, остался только `movesLabel`), `BottomBarView` добавлен на
   `BottomBar` (`restartButton`/`undoButton`/`hintButton`/`hintBadgeLabel`/`pauseButton`), новая нода
   `Systems/HintSystem` с компонентом `HintSystem` (`config` + обратная ссылка `GameEntryPoint.hintSystem`),
   `LayoutAdapter.bottomBar`. Все цели брались из таблицы wiring в `SCENE_SETUP.md` — совпадает 1-в-1.

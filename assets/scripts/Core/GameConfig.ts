@@ -44,9 +44,6 @@ export class GameConfig extends Component {
     @property({ tooltip: 'Число доступных подсказок за уровень' })
     public hintCount = 2;
 
-    @property({ tooltip: 'Рекордное число ходов, показывается в HUD как декор (DESIGN_UPDATE_PLAN.md §8.5 — не меняем)' })
-    public movesRecord = 52;
-
     @property({ tooltip: 'Пауза между EVT_LEVEL_SOLVED и EVT_REQUEST_CTA, сек (DESIGN_UPDATE_PLAN.md §4.2)' })
     public winFxDuration = 0.6;
 
