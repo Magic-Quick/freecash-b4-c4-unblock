@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, tween, Tween, Vec3 } from 'cc';
+import { _decorator, Component, Node, tween, Tween, Vec2, Vec3 } from 'cc';
 import { GameConfig } from '../Core/GameConfig';
 import { GlobalEventBus } from '../event-bus/event-bus';
 import {
@@ -18,6 +18,12 @@ const { ccclass, property } = _decorator;
 export class TutorialFingerView extends Component {
     @property(GameConfig)
     public config: GameConfig | null = null;
+
+    // Ручная поправка финальной точки тапа поверх расчётной (design-units, локальные оси ноды) — для
+    // точечной правки конкретного уровня/блока без изменения формулы центра (например, если кончик
+    // пальца на art не совпадает с пиксельным центром спрайта). 0,0 — расчётная точка не трогается.
+    @property({ tooltip: 'Ручное смещение финальной точки тапа поверх расчётной, design-units' })
+    public tapPointOffset: Vec2 = new Vec2(0, 0);
 
     // Заход в кадр (entrance) и петля тапа (pulse) — разные твины: entrance завершается один раз и
     // передаёт эстафету pulse через .call(), stopLoop() гасит оба разом, каким бы ни застали hide().
@@ -40,17 +46,17 @@ export class TutorialFingerView extends Component {
     }
 
     private onShow(event: TutorialShowEvent): void {
-        this.showHint(event.fromCell, event.toCell);
+        this.showHint(event.fromCell, event.toCell, event.blockLength);
     }
 
     private onHide(): void {
         this.hide();
     }
 
-    // Петля тапа: палец задерживается у нужной половины блока и делает "нажатие" (пульс масштаба) —
-    // ход теперь по тапу, а не по свайпу (BlockView.resolveTapDirection), поэтому подсказка не должна
-    // изображать перетаскивание через всё поле, иначе жест введёт игрока в заблуждение.
-    public showHint(fromCell: GridCell, toCell: GridCell): void {
+    // Точка тапа — геометрический центр самого блока (BlockView.cellToLocal), а не центр одной лишь
+    // ячейки fromCell: для блоков length>1 (levels.json — есть length 2/3) это разные точки, и палец,
+    // указывающий на центр якорной ячейки, стоял бы заметно мимо визуального центра длинных блоков.
+    public showHint(fromCell: GridCell, toCell: GridCell, blockLength: number): void {
         if (!this.config) {
             return;
         }
@@ -65,21 +71,33 @@ export class TutorialFingerView extends Component {
         const offsetY = this.config.gridOriginY;
         const from = new Vec3((fromCell.col + 0.5) * colPitch + offsetX, -(fromCell.row + 0.5) * rowPitch + offsetY, 0);
         const to = new Vec3((toCell.col + 0.5) * colPitch + offsetX, -(toCell.row + 0.5) * rowPitch + offsetY, 0);
-        // Нужная для хода половина блока — направление from→to, сдвиг на четверть шага сетки от
-        // fromCell в его сторону (BlockView.resolveTapDirection делит блок ровно пополам по той же оси).
+        // Направление хода — только для оси захода в кадр ниже; сама точка тапа теперь не зависит от
+        // направления (раньше сдвигалась на четверть клетки в сторону хода, имитируя нужную половину
+        // блока под BlockView.resolveTapDirection — по ТЗ переставлено на геометрический центр).
         const dirVec = new Vec3(to.x - from.x, to.y - from.y, 0).normalize();
-        const tapOffset = Math.min(colPitch, rowPitch) * 0.25;
-        const tapPoint = new Vec3(from.x + dirVec.x * tapOffset, from.y + dirVec.y * tapOffset, 0);
+        // Блок растёт от анкорной (fromCell.col,row) ячейки вдоль своей оси (BlockModel: col+i для
+        // horizontal, row+i для vertical) — тот же axisCenterOffset, что и BlockView.setup()/cellToLocal().
+        const isHorizontal = fromCell.row === toCell.row;
+        const axisCenterOffset = (blockLength - 1) / 2;
+        const tapPoint = isHorizontal
+            ? new Vec3((fromCell.col + axisCenterOffset + 0.5) * colPitch + offsetX, from.y, 0)
+            : new Vec3(from.x, -(fromCell.row + axisCenterOffset + 0.5) * rowPitch + offsetY, 0);
+        tapPoint.x += this.tapPointOffset.x;
+        tapPoint.y += this.tapPointOffset.y;
         this.stopLoop();
         // Вход в кадр вдоль dirVec — палец подъезжает к точке тапа с той стороны, куда двинется блок,
         // так что само движение входа уже показывает направление свайпа, а не произвольный slide-in.
-        const entranceDistance = Math.min(colPitch, rowPitch) * 0.8;
+        // Дистанция — доля габарита платы вдоль оси хода (GameConfig.boardDesignSize), а не доля шага
+        // сетки: клетка (~90 design-units) давала едва заметный «подскок» на 0.25с, старт читался как
+        // мгновенное появление рядом с точкой тапа, а не заход из-за пределов поля.
+        const axisExtent = dirVec.x !== 0 ? this.config.boardDesignSize.width : this.config.boardDesignSize.height;
+        const entranceDistance = axisExtent * 0.75;
         const entryPoint = new Vec3(tapPoint.x - dirVec.x * entranceDistance, tapPoint.y - dirVec.y * entranceDistance, 0);
         this.node.setPosition(entryPoint);
         this.node.setScale(0.6, 0.6, 1);
         const pressScale = 0.82;
         this.entranceTween = tween(this.node)
-            .to(0.25, { position: tapPoint, scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
+            .to(0.75, { position: tapPoint, scale: new Vec3(1, 1, 1) }, { easing: 'backOut' })
             .call(() => {
                 this.pulseTween = tween(this.node)
                     .to(0.15, { scale: new Vec3(pressScale, pressScale, 1) })

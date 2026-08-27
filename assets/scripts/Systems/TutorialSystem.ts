@@ -83,6 +83,10 @@ export class TutorialSystem extends Component {
         if (!move) {
             return null;
         }
-        return { fromCell: move.fromCell, toCell: move.toCell };
+        // fromCell — якорная ячейка блока ДО хода (BoardSolver.SolverMove), в blocks (тот же снапшот)
+        // ищем сам блок за длиной — длина не меняется ходом, брать из snapshot после solve() было бы
+        // эквивалентно, но blocks уже под рукой.
+        const movedBlock = blocks.find((block) => block.id === move.blockId);
+        return { fromCell: move.fromCell, toCell: move.toCell, blockLength: movedBlock?.length ?? 1 };
     }
 }

@@ -80,7 +80,12 @@ export class HintSystem extends Component {
         // Тот же визуал, что и автоподсказка перед первым ходом (TutorialSystem/TutorialFingerView) —
         // палец на fromCell→toCell хода, а не отдельный неотрисовываемый EVT_HINT_SHOW (blockId/dir
         // без позиций никто не слушал, кнопка молча тратила подсказку без визуального отклика).
-        GlobalEventBus.publish<TutorialShowEvent>(EVT_TUTORIAL_SHOW, { fromCell: move.fromCell, toCell: move.toCell });
+        const movedBlock = snapshot.blocks.find((block) => block.id === move.blockId);
+        GlobalEventBus.publish<TutorialShowEvent>(EVT_TUTORIAL_SHOW, {
+            fromCell: move.fromCell,
+            toCell: move.toCell,
+            blockLength: movedBlock?.length ?? 1,
+        });
         GlobalEventBus.publish<HintsChangedEvent>(EVT_HINTS_CHANGED, { hints: this.hintsRemaining });
     }
 }

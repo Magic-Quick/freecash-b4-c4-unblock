@@ -3164,6 +3164,11 @@
     "config": {
       "__id__": 39
     },
+    "tapPointOffset": {
+      "__type__": "cc.Vec2",
+      "x": 50,
+      "y": -30
+    },
     "_id": "pEzgh8FHFLJAlgdm4V8VDj"
   },
   {

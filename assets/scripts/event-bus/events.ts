@@ -60,6 +60,10 @@ export const EVT_TUTORIAL_SHOW = 'EVT_TUTORIAL_SHOW';
 export interface TutorialShowEvent {
     fromCell: GridCell;
     toCell: GridCell;
+    // Длина двигающегося блока (BlockModel.length) — точка тапа должна стоять в геометрическом центре
+    // блока (BlockView.cellToLocal), а не в центре одной лишь ячейки fromCell: для блоков length>1
+    // это разные точки (TutorialFingerView.showHint()).
+    blockLength: number;
 }
 
 export const EVT_TUTORIAL_HIDE = 'EVT_TUTORIAL_HIDE';
