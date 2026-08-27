@@ -48,10 +48,10 @@ export class BlockView extends Component {
     // Смещение центра блока (в ячейках) вдоль его оси относительно "базовой" (col,row) ячейки —
     // считается один раз в setup(), т.к. length/axis блока не меняются в течение уровня.
     private axisCenterOffset = 0;
-    // Сдвиг, центрирующий сетку на локальном (0,0) контейнера — тот же расчёт, что и в
-    // BoardView.buildLevel()/TutorialFingerView.showHint(), чтобы все три View рисовали ячейки в
-    // одном и том же месте. Без него ячейка (0,0) рисуется в (0,0) контейнера, а не в его углу —
-    // вся сетка уезжает в правый нижний квадрант относительно центрированного BoardFrame.
+    // Сдвиг от локального (0,0) контейнера (= центр платы) к левому-верхнему углу внутреннего поля —
+    // тот же расчёт, что и в BoardView.buildLevel()/TutorialFingerView.showHint(), чтобы все три View
+    // рисовали ячейки в одном и том же месте. Без него ячейка (0,0) рисуется в (0,0) контейнера, а не
+    // в углу поля — вся сетка уезжает в правый нижний квадрант относительно центрированного BoardFrame.
     private gridOffsetX = 0;
     private gridOffsetY = 0;
 
@@ -80,8 +80,8 @@ export class BlockView extends Component {
         this.rowPitch = rowPitch;
         this.level = level;
         this.axisCenterOffset = (blockModel.length - 1) / 2;
-        this.gridOffsetX = -((this.config?.gridCols ?? 0) * colPitch) / 2;
-        this.gridOffsetY = ((this.config?.gridRows ?? 0) * rowPitch) / 2;
+        this.gridOffsetX = this.config?.gridOriginX ?? 0;
+        this.gridOffsetY = this.config?.gridOriginY ?? 0;
         this.applyPosition({ col: blockModel.col, row: blockModel.row });
         if (this.sprite) {
             // Sprite.type=SIMPLE, а не SLICED: арт запечён под целевую длину, растягивать по border'ам
@@ -168,10 +168,12 @@ export class BlockView extends Component {
         // вертикальный занимает один шаг сетки поперёк оси.
         const model = this.blockModel;
         const visualWidth = model && model.axis === 'horizontal' ? model.length * this.colPitch : this.colPitch;
-        // Правый край внутреннего поля платы в локальных координатах контейнера: gridOffsetX
-        // центрирует сетку, так что край ровно в половине полной ширины сетки (DESIGN_UPDATE_PLAN.md
-        // §4.1 — дистанция от правого края inner rect, а не захардкоженное число ячеек).
-        const rightEdgeX = ((this.config?.gridCols ?? 0) * this.colPitch) / 2;
+        // Правый край внутреннего поля платы в локальных координатах контейнера: gridOffsetX — это уже
+        // ЛЕВЫЙ край поля (GameConfig.gridOriginX), поэтому правый = левый + полная ширина сетки
+        // (DESIGN_UPDATE_PLAN.md §4.1 — дистанция от правого края inner rect, а не захардкоженное число
+        // ячеек). Половину ширины сетки здесь брать нельзя: поле на Board_full.png не отцентровано в
+        // текстуре платы, и блок останавливался бы, не дойдя до кармана выхода.
+        const rightEdgeX = this.gridOffsetX + (this.config?.gridCols ?? 0) * this.colPitch;
         const current = this.node.position;
         const exitDistance = rightEdgeX - current.x + visualWidth;
         const target = new Vec3(current.x + exitDistance, current.y, current.z);

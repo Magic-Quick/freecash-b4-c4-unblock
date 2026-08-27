@@ -12,11 +12,18 @@
 
 ## Геометрия поля — не хардкодить
 
-Сетка платы **запечена в `board.png`**, координаты не выводятся из `cellSize`/`cellSpacing` (эти поля
-удаляются, см. план Шаг 2.1). Источник правды — `GameConfig`: `boardTextureSize`, `boardInner{Left,Top,
-Right,Bottom}`, геттеры `colPitch`/`rowPitch`, `exitNotchOffsetX`/`exitNotchWidth`. Габарит платы в
-дизайн-юнитах ≈ **552×522** (план §2). Ни одна нода/View не должна содержать числовой литерал этой
-геометрии — только чтение из `GameConfig` (ворота Шага 4 плана).
+Сетка платы **запечена в `Board_full.png`** (755×679, карман выхода тоже запечён — отдельная накладка
+`ExitNotch` выключена), координаты не выводятся из `cellSize`/`cellSpacing` (эти поля удалены, см. план
+Шаг 2.1). Источник правды — `GameConfig`: `boardTextureSize`, `boardInner{Left,Top,Right,Bottom}`,
+геттеры `colPitch`/`rowPitch`/`gridOriginX`/`gridOriginY`, `exitNotchOffsetX`/`exitNotchWidth`. Габарит
+платы в дизайн-юнитах — **640×600** (`contentSize` ноды `BoardFrame`, план §2). Ни одна нода/View не
+должна содержать числовой литерал этой геометрии — только чтение из `GameConfig` (ворота Шага 4 плана).
+
+**Поле НЕ отцентровано в текстуре платы** (карман выхода занимает правое поле: 32 px слева против 92 px
+справа), поэтому угол сетки берётся из `gridOriginX`/`gridOriginY`, а не как `-(gridCols*colPitch)/2`.
+Следствие для сцены: всё, что позиционируется в координатах сетки (`BlocksContainer`, `Board` с его
+детьми `ExitNotch`/`ExitArrows`, `TutorialLayer` с `Finger`), обязано стоять **в той же точке, что и
+`BoardFrame`** — центр платы. Сейчас это `(0, 20)` внутри `GameplayLayer`/`BoardArea`.
 
 ## Целевая иерархия
 ```
@@ -34,17 +41,18 @@ Canvas
 │   │   └── MovesPanel        (panel.png; "Moves" + MovesLabel(live) + "Record" + RecordLabel("52",
 │   │                          статичный декор, §8.5 плана — не менять и не оживлять)          [MovesView]
 │   ├── GameplayLayer         (центр)
-│   │   ├── BoardFrame        (Sprite art/board/board.png, type=SIMPLE, нативный аспект 718×679 —
-│   │   │                      сетка уже нарисована в текстуре, без 9-slice)
+│   │   ├── BoardFrame        (Sprite art/board/Board_full.png 755×679 @ contentSize 640×600,
+│   │   │                      type=SIMPLE, sizeMode=CUSTOM, trimmedMode=false — сетка И карман выхода
+│   │   │                      уже нарисованы в текстуре, без 9-slice)                    pos (0, 20)
 │   │   ├── BlocksContainer   (пусто; BoardView спавнит Block.prefab: 4 запечённых кадра len2/3 ×
-│   │   │                      obst/main, type=SIMPLE, sizeMode=CUSTOM — план 5.1)
-│   │   ├── Board             (пустая нода-якорь)                                            [BoardView]
-│   │   ├── ExitNotch         (Sprite art/board/exit_notch.png — статичная накладка выреза рамки,
-│   │   │                      позиция по exitRow уровня, план §2/5.4; сверить стык с рамкой
-│   │   │                      в Preview глазами — единственное реальное место риска шва)
-│   │   └── ExitArrows        (Sprite art/board/exit_arrows.png — пульсирует отдельно от статичного
-│   │                          ExitNotch, план 4.7)                                    [ExitArrowView]
-│   ├── TutorialLayer
+│   │   │                      obst/main, type=SIMPLE, sizeMode=CUSTOM — план 5.1)        pos (0, 20)
+│   │   ├── Board             (пустая нода-якорь)                            [BoardView]  pos (0, 20)
+│   │   │   ├── ExitNotch     (Sprite art/board/exit_notch.png — накладка выреза для плат БЕЗ
+│   │   │   │                  запечённого кармана; на Board_full.png active=false, не удалять —
+│   │   │   │                  сцена держит ссылку BoardView.exitNotch)
+│   │   │   └── ExitArrows    (Sprite art/board/exit_arrows.png — пульсирует отдельно, план 4.7;
+│   │   │                      позиция по exitRow уровня, план §2/5.4)             [ExitArrowView]
+│   ├── TutorialLayer                                                                     pos (0, 20)
 │   │   └── Finger            (art/ui/finger.png — болванка, реальный спрайт руки ждём от владельца,
 │   │                          план §6 вопрос A / GDD §3)                            [TutorialFingerView]
 │   ├── FxLayer
@@ -119,8 +127,8 @@ Canvas
 | `BoardView.config` | `GameManager/GameEntryPoint` (GameConfig) |
 | `BoardView.blockPrefab` | `db://assets/prefabs/Block.prefab` |
 | `BoardView.blocksContainer` | `.../GameplayLayer/BlocksContainer` |
-| `BoardView.exitNotch` | `.../GameplayLayer/ExitNotch` |
-| `BoardView.exitArrows` | `.../GameplayLayer/ExitArrows` (ExitArrowView) |
+| `BoardView.exitNotch` | `.../GameplayLayer/Board/ExitNotch` (active=false при Board_full.png) |
+| `BoardView.exitArrows` | `.../GameplayLayer/Board/ExitArrows` (ExitArrowView) |
 | `HudView.difficultyLabel` | `.../HudLayer/LevelPanel/DifficultyLabel` (Label) |
 | `MovesView.movesLabel` | `.../HudLayer/MovesPanel/MovesLabel` (Label) |
 | `MovesView.recordLabel` | `.../HudLayer/MovesPanel/RecordLabel` (Label) — статика §8.5, не пересчитывается |

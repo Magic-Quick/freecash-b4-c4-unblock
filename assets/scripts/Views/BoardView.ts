@@ -95,16 +95,14 @@ export class BoardView extends Component {
         // позиции в одной системе координат.
         const colPitch = this.config.colPitch;
         const rowPitch = this.config.rowPitch;
-        // Центрирующий сдвиг: без него ячейка (0,0) рисуется в локальном (0,0) контейнера, а не в его
-        // углу — вся сетка уезжает в правый нижний квадрант относительно центрированного BoardFrame
-        // (контейнеры без anchorPoint-смещения детей, см. SCENE_SETUP.md). Тот же расчёт в
-        // BlockView.setup()/TutorialFingerView.showHint() — все три View обязаны рисовать в одном месте.
-        // Эквивалентен смещению от inner rect платы: gridCols*colPitch === (boardInnerRight-boardInnerLeft)*scaleX
-        // (colPitch — геттер именно из этой разницы, спроецированной в design-units, GameConfig.ts),
-        // т.е. offset уже посчитан от inner rect (в design-units), просто в терминах шага сетки, а не
-        // сырых текстурных границ.
-        const offsetX = -(this.config.gridCols * colPitch) / 2;
-        const offsetY = (this.config.gridRows * rowPitch) / 2;
+        // Сдвиг к левому-верхнему углу внутреннего поля платы: без него ячейка (0,0) рисуется в
+        // локальном (0,0) контейнера, а не в углу поля (контейнеры без anchorPoint-смещения детей,
+        // см. SCENE_SETUP.md). Тот же расчёт в BlockView.setup()/TutorialFingerView.showHint() — все
+        // три View обязаны рисовать в одном месте. Берём его из GameConfig.gridOrigin*, а не как
+        // -(gridCols*colPitch)/2: поле на Board_full.png НЕ отцентровано в текстуре (карман выхода
+        // запечён справа), и «центрирующая» формула увела бы всю сетку вправо на ~25 design-units.
+        const offsetX = this.config.gridOriginX;
+        const offsetY = this.config.gridOriginY;
         this.positionExit(exitRow, offsetX, offsetY, rowPitch);
         if (this.blockPrefab && this.blocksContainer) {
             blocks.forEach((block) => {
@@ -126,13 +124,18 @@ export class BoardView extends Component {
         }
     }
 
-    // Позиционирует ExitNotch/ExitArrows по exitRow уровня (DESIGN_UPDATE_PLAN.md §2/5.4): вырез
-    // рамки — фиксированная накладка, снятая в текстурных координатах платы (exitNotchOffsetX/Width),
-    // но проецируется в design-units через GameConfig.exitNotchCenterOffsetX (та же scaleX, что и у
-    // colPitch) — иначе offsetX (уже design-units) складывался бы с сырыми texture-px величинами.
-    // Строка выхода определяет только Y. Формула Y совпадает с cellToLocal() для row=exitRow (§2:
-    // "y_центр = rowLine[R] + rowPitch/2" — тот же центр ячейки), поэтому вырез всегда встаёт вровень
-    // с рядом блоков, а не по отдельной логике.
+    // Позиционирует ExitNotch/ExitArrows по exitRow уровня (DESIGN_UPDATE_PLAN.md §2/5.4): карман
+    // выхода снят в текстурных координатах платы (exitNotchOffsetX/Width), но проецируется в
+    // design-units через GameConfig.exitNotchCenterOffsetX (та же scaleX, что и у colPitch) — иначе
+    // offsetX (уже design-units) складывался бы с сырыми texture-px величинами. Строка выхода
+    // определяет только Y. Формула Y совпадает с cellToLocal() для row=exitRow (§2: "y_центр =
+    // rowLine[R] + rowPitch/2" — тот же центр ячейки), поэтому стрелки всегда встают вровень с рядом
+    // блоков, а не по отдельной логике.
+    // Обе ноды — дети `Board` (ноды этого компонента), т.е. живут в той же системе координат, что и
+    // BlocksContainer: центр платы. Раньше они были сиблингами GameplayLayer, чей центр на 20
+    // design-units ниже центра платы, и любая расчётная позиция промахивалась ровно на эти 20.
+    // На Board_full.png карман запечён в саму плату, поэтому ExitNotch-накладка выключена в сцене —
+    // ссылка остаётся опциональной, двигаем только то, что реально есть.
     private positionExit(exitRow: number, offsetX: number, offsetY: number, rowPitch: number): void {
         if (!this.config) {
             return;

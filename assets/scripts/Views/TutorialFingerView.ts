@@ -54,10 +54,12 @@ export class TutorialFingerView extends Component {
         this.node.active = true;
         const colPitch = this.config.colPitch;
         const rowPitch = this.config.rowPitch;
-        // Тот же центрирующий сдвиг, что в BoardView.buildLevel()/BlockView.cellToLocal() — палец
-        // должен указывать на реальную позицию ячейки, а не на смещённую (см. комментарий там).
-        const offsetX = -(this.config.gridCols * colPitch) / 2;
-        const offsetY = (this.config.gridRows * rowPitch) / 2;
+        // Тот же сдвиг к углу внутреннего поля, что в BoardView.buildLevel()/BlockView.cellToLocal() —
+        // палец должен указывать на реальную позицию ячейки, а не на смещённую (см. комментарий там).
+        // Работает только потому, что нода Finger живёт в системе координат центра платы: TutorialLayer
+        // стоит в той же точке сцены, что BoardFrame/BlocksContainer (см. SCENE_SETUP.md).
+        const offsetX = this.config.gridOriginX;
+        const offsetY = this.config.gridOriginY;
         const from = new Vec3((fromCell.col + 0.5) * colPitch + offsetX, -(fromCell.row + 0.5) * rowPitch + offsetY, 0);
         const to = new Vec3((toCell.col + 0.5) * colPitch + offsetX, -(toCell.row + 0.5) * rowPitch + offsetY, 0);
         // Нужная для хода половина блока — направление from→to, сдвиг на четверть шага сетки от

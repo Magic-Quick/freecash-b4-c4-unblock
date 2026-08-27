@@ -7,14 +7,14 @@ const { ccclass, property } = _decorator;
 const DESIGN_WIDTH = 720;
 const DESIGN_HEIGHT = 1280;
 // Паддинг платы в portrait — расстояние от края GameplayLayer до края видимой области по ширине.
-// Новая плата (DESIGN_UPDATE_PLAN.md §2): board.png 718×679 в масштабе даёт габарит 552×522 на
-// канвасе 720×1280, т.е. (720 - 552) / 2 = 84, соотношение 84/720 (старая плата занимала почти всю
-// ширину экрана — 680 из 720 — новая заметно компактнее). BOARD_MARGIN_RATIO сам по себе нигде не
-// пересчитывается кодом — portrait-геометрия платы берётся из авторской позиции сцены (captureBaseline);
-// константа документирует происхождение BOARD_WIDTH_DESIGN. В landscape этот паддинг больше не
-// переносится напрямую на высоту (QA-фикс наезда платы на bottomBar) — см. LANDSCAPE_BOARD_TOP_MARGIN/
-// _BOTTOM_GAP ниже, у которых теперь своя, независимая от BOARD_MARGIN_RATIO формула.
-const BOARD_WIDTH_DESIGN = 552;
+// Текущая плата (DESIGN_UPDATE_PLAN.md §2, ревизия 4): Board_full.png 755×679 натянута на
+// contentSize 640×600 на канвасе 720×1280, т.е. (720 - 640) / 2 = 40, соотношение 40/720.
+// BOARD_MARGIN_RATIO сам по себе нигде не пересчитывается кодом — portrait-геометрия платы берётся из
+// авторской позиции сцены (captureBaseline); константа документирует происхождение BOARD_WIDTH_DESIGN.
+// В landscape этот паддинг больше не переносится напрямую на высоту (QA-фикс наезда платы на bottomBar)
+// — см. LANDSCAPE_BOARD_TOP_MARGIN/_BOTTOM_GAP ниже, у которых теперь своя, независимая от
+// BOARD_MARGIN_RATIO формула.
+const BOARD_WIDTH_DESIGN = 640;
 const BOARD_MARGIN_RATIO = (DESIGN_WIDTH - BOARD_WIDTH_DESIGN) / 2 / DESIGN_WIDTH;
 // Итерация 4 (по запросу владельца): не высчитываем "ширину колонки" под конкретный aspect ratio —
 // на телефоне и планшете landscape выглядит по-разному (у планшета aspect ближе к 4:3, у телефона
