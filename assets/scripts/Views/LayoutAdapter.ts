@@ -59,6 +59,17 @@ export class LayoutAdapter extends Component {
     @property(Node)
     public packshotBg: Node | null = null;
 
+    // Пэкшот в landscape — трёхколоночная композиция, как у HUD/платы/BottomBar: Logo слева,
+    // PlayButton справа, CenterGroup (YouWon/Gift/Bonus) по центру со scale-to-fit.
+    @property(Node)
+    public ctaLogo: Node | null = null;
+
+    @property(Node)
+    public ctaPlayButton: Node | null = null;
+
+    @property(Node)
+    public ctaCenterGroup: Node | null = null;
+
     // Обёртка платы: её двигаем/масштабируем целиком.
     @property(Node)
     public boardArea: Node | null = null;
@@ -121,6 +132,15 @@ export class LayoutAdapter extends Component {
     @property({ tooltip: 'landscape: поворот чеврона (право → вниз)' })
     public landscapeChevronAngle = -90;
 
+    @property({ tooltip: 'landscape: суммарный запас по ширине экрана для строки Logo–CenterGroup–PlayButton' })
+    public landscapeCtaEdgePadding = 60;
+
+    @property({ tooltip: 'landscape: зазор между Logo/PlayButton пэкшота и CenterGroup' })
+    public landscapeCtaColumnGap = 40;
+
+    @property({ tooltip: 'landscape: общая горизонталь Logo/PlayButton пэкшота (Y в дизайн-единицах)' })
+    public landscapeCtaBaselineY = 0;
+
     private readonly _onResize = this.onResize.bind(this);
 
     // Portrait-база, захваченная один раз из сцены (см. captureBaseline).
@@ -136,6 +156,9 @@ export class LayoutAdapter extends Component {
     private hudColumnBase: NodeBaseline[] = [];
     private buttonColumnBase: NodeBaseline[] = [];
     private bottomBarWidget: Widget | null = null;
+    private ctaLogoBase: NodeBaseline | null = null;
+    private ctaPlayButtonBase: NodeBaseline | null = null;
+    private ctaCenterGroupBase: NodeBaseline | null = null;
 
     protected onLoad(): void {
         this.captureBaseline();
@@ -176,6 +199,9 @@ export class LayoutAdapter extends Component {
         this.disclaimerBase = this.disclaimer ? new NodeBaseline(this.disclaimer) : null;
         this.hudColumnBase = this.hudColumn.map((node) => new NodeBaseline(node));
         this.buttonColumnBase = this.buttonColumn.map((node) => new NodeBaseline(node));
+        this.ctaLogoBase = this.ctaLogo ? new NodeBaseline(this.ctaLogo) : null;
+        this.ctaPlayButtonBase = this.ctaPlayButton ? new NodeBaseline(this.ctaPlayButton) : null;
+        this.ctaCenterGroupBase = this.ctaCenterGroup ? new NodeBaseline(this.ctaCenterGroup) : null;
         if (this.boardFrame && this.boardArea) {
             this.boardFrameOffset = LayoutAdapter.offsetWithin(this.boardFrame, this.boardArea);
         }
@@ -271,6 +297,16 @@ export class LayoutAdapter extends Component {
         }
         LayoutAdapter.restoreColumn(this.hudColumn, this.hudColumnBase);
         LayoutAdapter.restoreColumn(this.buttonColumn, this.buttonColumnBase);
+        if (this.ctaLogo && this.ctaLogoBase) {
+            this.ctaLogo.setPosition(this.ctaLogoBase.position);
+        }
+        if (this.ctaPlayButton && this.ctaPlayButtonBase) {
+            this.ctaPlayButton.setPosition(this.ctaPlayButtonBase.position);
+        }
+        if (this.ctaCenterGroup && this.ctaCenterGroupBase) {
+            this.ctaCenterGroup.setPosition(this.ctaCenterGroupBase.position);
+            this.ctaCenterGroup.setScale(this.ctaCenterGroupBase.scale);
+        }
     }
 
     private static restoreColumn(nodes: Node[], baselines: NodeBaseline[]): void {
@@ -345,6 +381,28 @@ export class LayoutAdapter extends Component {
 
         if (this.chevronNext) {
             this.chevronNext.angle = this.landscapeChevronAngle;
+        }
+
+        // --- 5. Пэкшот: Logo и PlayButton встают вплотную к CenterGroup по бокам (не у края экрана),
+        // на одной общей горизонтали. CenterGroup остаётся по центру и масштабируется, если всей
+        // строке не хватает ширины экрана.
+        if (this.ctaLogoBase && this.ctaPlayButtonBase && this.ctaCenterGroupBase) {
+            const logoWidth = this.ctaLogoBase.width;
+            const buttonWidth = this.ctaPlayButtonBase.width;
+            const availableWidth = Math.max(1, visibleHalfWidth * 2 - this.landscapeCtaEdgePadding * 2);
+            const availableForCenter = Math.max(
+                1,
+                availableWidth - logoWidth - buttonWidth - this.landscapeCtaColumnGap * 2,
+            );
+            const centerScale = Math.min(1, availableForCenter / this.ctaCenterGroupBase.width);
+            const centerHalfWidth = (this.ctaCenterGroupBase.width * centerScale) / 2;
+            const logoX = -(centerHalfWidth + this.landscapeCtaColumnGap + logoWidth / 2);
+            const buttonX = centerHalfWidth + this.landscapeCtaColumnGap + buttonWidth / 2;
+
+            this.ctaLogo?.setPosition(logoX, this.landscapeCtaBaselineY, 0);
+            this.ctaPlayButton?.setPosition(buttonX, this.landscapeCtaBaselineY, 0);
+            this.ctaCenterGroup?.setPosition(this.ctaCenterGroupBase.position);
+            this.ctaCenterGroup?.setScale(centerScale, centerScale, 1);
         }
     }
 
