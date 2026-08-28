@@ -267,7 +267,8 @@
     "len3VObstFrame": {
       "__uuid__": "abe24883-295e-4f57-ba03-7ae9b728b5e7@f9941",
       "__expectedType__": "cc.SpriteFrame"
-    }
+    },
+    "visualScale": 0.95
   },
   {
     "__type__": "cc.CompPrefabInfo",

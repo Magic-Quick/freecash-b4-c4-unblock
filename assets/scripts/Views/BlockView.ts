@@ -66,6 +66,13 @@ export class BlockView extends Component {
     @property({ tooltip: 'Паддинг слева/справа (средний) у main-кадра, px исходного кадра' })
     public mainInsetSides = 15.5;
 
+    // Точечная правка "блоки чуть меньше ячейки" (NEW_ASSETS_INTEGRATION_PLAN.md, чат с владельцем):
+    // масштабирует уже посчитанный по инсетам размер Visual, оставляя Block.contentSize (хит-тест,
+    // шаг сетки, driveToExit()) нетронутым — визуально уменьшается только тело блока и появляется
+    // зазор до соседей, сама сетка не сжимается.
+    @property({ tooltip: 'Доп. масштаб визуала блока относительно ячейки (1 = впритык, <1 = зазор до соседей)' })
+    public visualScale = 1;
+
     private blockModel: BlockModel | null = null;
     // Шаг сетки по X/Y (GameConfig.colPitch/rowPitch — ячейка не квадратная, DESIGN_UPDATE_PLAN.md §2),
     // переданный из BoardView.buildLevel() — держит BlockView в той же системе координат, что и BoardView.
@@ -159,8 +166,8 @@ export class BlockView extends Component {
         const rawH = art.frame.height;
         const bodyW = rawW - art.insetSides * 2;
         const bodyH = rawH - art.insetTop - art.insetBottom;
-        const visualW = (cellW * rawW) / bodyW;
-        const visualH = (cellH * rawH) / bodyH;
+        const visualW = ((cellW * rawW) / bodyW) * this.visualScale;
+        const visualH = ((cellH * rawH) / bodyH) * this.visualScale;
         const offsetY = ((art.insetTop - art.insetBottom) / 2) * (visualH / rawH);
         visualTransform.setContentSize(visualW, visualH);
         visualNode.setPosition(0, offsetY, 0);
