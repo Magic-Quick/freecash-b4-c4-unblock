@@ -25,19 +25,46 @@ export class BlockView extends Component {
     @property(Sprite)
     public sprite: Sprite | null = null;
 
-    // 4 запечённых кадра — длина × роль (DESIGN_UPDATE_PLAN.md §3, §4.1, §5 Шаг 4.1). Цвет уже в PNG,
-    // Sprite.color остаётся свободен под FX.
+    // 5 запечённых кадров — своя ориентация под horizontal/vertical, поворота больше нет
+    // (NEW_ASSETS_INTEGRATION_PLAN.md §0.1/§4 Фаза B). Главный блок зафиксирован как horizontal len2
+    // (решение владельца N2) — отдельного вертикального/len3 варианта нет. Цвет уже в PNG, Sprite.color
+    // остаётся свободен под FX.
     @property(SpriteFrame)
-    public len2ObstFrame: SpriteFrame | null = null;
+    public len2HObstFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
-    public len2MainFrame: SpriteFrame | null = null;
+    public len3HObstFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
-    public len3ObstFrame: SpriteFrame | null = null;
+    public len2VObstFrame: SpriteFrame | null = null;
 
     @property(SpriteFrame)
-    public len3MainFrame: SpriteFrame | null = null;
+    public len3VObstFrame: SpriteFrame | null = null;
+
+    @property(SpriteFrame)
+    public mainFrame: SpriteFrame | null = null;
+
+    // Новая нарезка несёт запечённый асимметричный паддинг вокруг тела блока (NEW_ASSETS_INTEGRATION_PLAN.md
+    // §1.3/§3.2): сверху меньше прозрачного поля, чем снизу, и по бокам не совсем поровну. Инсеты — в px
+    // исходного кадра (SpriteFrame.width/height), измерены по alpha-bbox отдельно для obst- и main-кадров;
+    // вынесены в @property, чтобы переэкспорт арта не требовал правки формулы в applyVisual().
+    @property({ tooltip: 'Паддинг сверху у obst-кадров, px исходного кадра' })
+    public obstInsetTop = 11;
+
+    @property({ tooltip: 'Паддинг снизу у obst-кадров, px исходного кадра' })
+    public obstInsetBottom = 19;
+
+    @property({ tooltip: 'Паддинг слева/справа (средний) у obst-кадров, px исходного кадра' })
+    public obstInsetSides = 15;
+
+    @property({ tooltip: 'Паддинг сверху у main-кадра, px исходного кадра' })
+    public mainInsetTop = 11;
+
+    @property({ tooltip: 'Паддинг снизу у main-кадра, px исходного кадра' })
+    public mainInsetBottom = 20;
+
+    @property({ tooltip: 'Паддинг слева/справа (средний) у main-кадра, px исходного кадра' })
+    public mainInsetSides = 15.5;
 
     private blockModel: BlockModel | null = null;
     // Шаг сетки по X/Y (GameConfig.colPitch/rowPitch — ячейка не квадратная, DESIGN_UPDATE_PLAN.md §2),
@@ -83,30 +110,60 @@ export class BlockView extends Component {
         this.gridOffsetX = this.config?.gridOriginX ?? 0;
         this.gridOffsetY = this.config?.gridOriginY ?? 0;
         this.applyPosition({ col: blockModel.col, row: blockModel.row });
-        if (this.sprite) {
-            // Sprite.type=SIMPLE, а не SLICED: арт запечён под целевую длину, растягивать по border'ам
-            // не нужно (DESIGN_UPDATE_PLAN.md §3/§5 Шаг 4.1 — закрывает бывшую 9-slice-политику).
-            this.sprite.type = Sprite.Type.SIMPLE;
-            this.sprite.spriteFrame = this.pickSpriteFrame(blockModel);
-        }
-        // Художник нарисовал только вертикальный арт (решение 0.3, §4.1): горизонтальные блоки — тот
-        // же кадр, повёрнутый на 90°. Размер задаём в "довращательных" терминах — ширина/высота
-        // поменяны местами для horizontal, — чтобы ПОСЛЕ поворота на экране получилось ровно
-        // length*pitch вдоль оси блока и pitch поперёк неё (DESIGN_UPDATE_PLAN.md §5 Шаг 4.1).
+
+        // Новая нарезка рисует горизонтальные и вертикальные кадры отдельно (§0.1) — поворота ноды
+        // больше нет, `Block.contentSize` ставится сразу по своей оси (NEW_ASSETS_INTEGRATION_PLAN.md
+        // §4 Фаза B, шаг B2). Эта нода отвечает за хит-тест тапа и логику доски — её contentSize должен
+        // остаться ровно `length*pitch × pitch`, растягивать/смещать под паддинг арта нельзя.
+        const horizontal = blockModel.axis === 'horizontal';
+        const cellW = horizontal ? blockModel.length * colPitch : colPitch;
+        const cellH = horizontal ? rowPitch : blockModel.length * rowPitch;
         const uiTransform = this.node.getComponent(UITransform);
         if (uiTransform) {
-            const along = blockModel.axis === 'horizontal' ? blockModel.length * colPitch : blockModel.length * rowPitch;
-            const across = blockModel.axis === 'horizontal' ? rowPitch : colPitch;
-            uiTransform.setContentSize(across, along);
+            uiTransform.setContentSize(cellW, cellH);
         }
-        this.node.angle = blockModel.axis === 'horizontal' ? -90 : 0;
+
+        const art = this.pickArt(blockModel);
+        if (this.sprite) {
+            // Sprite.type=SIMPLE, а не SLICED: арт запечён под целевую длину, растягивать по border'ам
+            // не нужно (закрывает бывшую 9-slice-политику).
+            this.sprite.type = Sprite.Type.SIMPLE;
+            this.sprite.spriteFrame = art.frame;
+        }
+        this.applyVisual(art, cellW, cellH);
     }
 
-    private pickSpriteFrame(blockModel: BlockModel): SpriteFrame | null {
-        if (blockModel.length >= 3) {
-            return blockModel.isMain ? this.len3MainFrame : this.len3ObstFrame;
+    private pickArt(blockModel: BlockModel): { frame: SpriteFrame | null; insetTop: number; insetBottom: number; insetSides: number } {
+        if (blockModel.isMain) {
+            return { frame: this.mainFrame, insetTop: this.mainInsetTop, insetBottom: this.mainInsetBottom, insetSides: this.mainInsetSides };
         }
-        return blockModel.isMain ? this.len2MainFrame : this.len2ObstFrame;
+        const horizontal = blockModel.axis === 'horizontal';
+        const long = blockModel.length >= 3;
+        const frame = horizontal
+            ? (long ? this.len3HObstFrame : this.len2HObstFrame)
+            : (long ? this.len3VObstFrame : this.len2VObstFrame);
+        return { frame, insetTop: this.obstInsetTop, insetBottom: this.obstInsetBottom, insetSides: this.obstInsetSides };
+    }
+
+    // Тело кадра (alpha-bbox) меньше raw-кадра и смещено относительно его центра (§1.3/§3.2): растягиваем
+    // дочернюю ноду `Visual` (не `Block`!) так, чтобы именно тело село ровно в cellW×cellH, и сдвигаем её
+    // по Y компенсируя разницу верхнего/нижнего паддинга. Числа считаются из SpriteFrame.width/height +
+    // инсетов, а не переписываются из измеренной таблицы — переэкспорт арта не потребует правки формулы.
+    private applyVisual(art: { frame: SpriteFrame | null; insetTop: number; insetBottom: number; insetSides: number }, cellW: number, cellH: number): void {
+        const visualNode = this.sprite?.node;
+        const visualTransform = visualNode?.getComponent(UITransform);
+        if (!visualNode || !visualTransform || !art.frame) {
+            return;
+        }
+        const rawW = art.frame.width;
+        const rawH = art.frame.height;
+        const bodyW = rawW - art.insetSides * 2;
+        const bodyH = rawH - art.insetTop - art.insetBottom;
+        const visualW = (cellW * rawW) / bodyW;
+        const visualH = (cellH * rawH) / bodyH;
+        const offsetY = ((art.insetTop - art.insetBottom) / 2) * (visualH / rawH);
+        visualTransform.setContentSize(visualW, visualH);
+        visualNode.setPosition(0, offsetY, 0);
     }
 
     private cellToLocal(cell: GridCell): Vec3 {
@@ -163,9 +220,8 @@ export class BlockView extends Component {
     public driveToExit(): void {
         this.stopActiveTween();
         const duration = this.config?.mainDriveDuration ?? 0.7;
-        // Визуальная ширина на экране (после поворота — UITransform.width её больше не отражает,
-        // содержимое довращательное, см. setup()): горизонтальный блок растянут на length*colPitch,
-        // вертикальный занимает один шаг сетки поперёк оси.
+        // Визуальная ширина на экране: горизонтальный блок растянут на length*colPitch, вертикальный
+        // занимает один шаг сетки поперёк оси (см. setup()).
         const model = this.blockModel;
         const visualWidth = model && model.axis === 'horizontal' ? model.length * this.colPitch : this.colPitch;
         // Правый край внутреннего поля платы в локальных координатах контейнера: gridOffsetX — это уже
@@ -223,12 +279,10 @@ export class BlockView extends Component {
             return null;
         }
         const local = uiTransform.convertToNodeSpaceAR(new Vec3(point.x, point.y, 0));
-        // node.angle поворачивает horizontal-блоки на -90° (setup()) поверх "довращательного" кадра, где
-        // локальная +Y всегда идёт вдоль оси блока (см. setup()/cellToLocal). После такого поворота
-        // локальная +Y смотрит в мировое "право" у horizontal и остаётся мировым "верх" у vertical —
-        // единственная проверка знака local.y корректна для обеих осей без отдельной ветки на угол.
+        // Нода больше не повёрнута (§4 Фаза B, шаг B2): ось блока совпадает с осью его локальных
+        // координат "как есть" — horizontal читает знак local.x, vertical — знак local.y.
         if (model.axis === 'horizontal') {
-            return local.y > 0 ? 'right' : 'left';
+            return local.x > 0 ? 'right' : 'left';
         }
         return local.y > 0 ? 'up' : 'down';
     }

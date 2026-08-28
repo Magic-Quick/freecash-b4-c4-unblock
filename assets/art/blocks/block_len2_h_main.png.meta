@@ -11,7 +11,7 @@
     "6c48a": {
       "importer": "texture",
       "uuid": "b0a8e0d6-3056-4380-9f97-4785c10c6e2c@6c48a",
-      "displayName": "2horizon_Red",
+      "displayName": "block_len2_h_main",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -35,7 +35,7 @@
     "f9941": {
       "importer": "sprite-frame",
       "uuid": "b0a8e0d6-3056-4380-9f97-4785c10c6e2c@f9941",
-      "displayName": "2horizon_Red",
+      "displayName": "block_len2_h_main",
       "id": "f9941",
       "name": "spriteFrame",
       "userData": {
