@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, Button, tween, Tween, Vec3 } from 'cc';
+import { _decorator, Component, Node, Button, tween, Tween, Vec3 } from 'cc';
 import { Playbox } from '../Core/Playbox';
 import { GlobalEventBus } from '../event-bus/event-bus';
 import { EVT_REQUEST_CTA, RequestCtaEvent } from '../event-bus/events';
@@ -24,9 +24,6 @@ export class CTAView extends Component {
 
     @property(Node)
     public logoNode: Node | null = null;
-
-    @property(Label)
-    public titleLabel: Label | null = null;
 
     @property(Button)
     public playButton: Button | null = null;

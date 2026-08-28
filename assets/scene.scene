@@ -2391,6 +2391,7 @@
     "landscapeChevronAngle": -90,
     "landscapeCtaEdgePadding": 60,
     "landscapeCtaColumnGap": 40,
+    "landscapeCtaBaselineY": 0,
     "_id": "073Ggjx1JonMe4vyYKDyZN"
   },
   {
@@ -3315,7 +3316,6 @@
     "logoNode": {
       "__id__": 68
     },
-    "titleLabel": null,
     "playButton": {
       "__id__": 66
     },

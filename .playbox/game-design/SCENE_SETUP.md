@@ -52,8 +52,10 @@ Canvas
 │   │   ├── BoardFrame        (Sprite art/board/Board_full.png 755×679 @ contentSize 640×600,
 │   │   │                      type=SIMPLE, sizeMode=CUSTOM, trimmedMode=false — сетка И карман выхода
 │   │   │                      уже нарисованы в текстуре, без 9-slice)                    pos (0, 20)
-│   │   ├── BlocksContainer   (пусто; BoardView спавнит Block.prefab: 4 запечённых кадра len2/3 ×
-│   │   │                      obst/main, type=SIMPLE, sizeMode=CUSTOM — план 5.1)        pos (0, 20)
+│   │   ├── BlocksContainer   (пусто; BoardView спавнит Block.prefab: 5 запечённых кадров —
+│   │   │                      obst × len2/len3 × h/v + main (только h/len2), type=SIMPLE,
+│   │   │                      sizeMode=CUSTOM. Поворота ноды на 90° больше нет: у каждой ориентации
+│   │   │                      свой кадр (NEW_ASSETS_INTEGRATION_PLAN.md §0.1) pos (0, 20)
 │   │   ├── Board             (пустая нода-якорь)                            [BoardView]  pos (0, 20)
 │   │   │   ├── ExitNotch     (Sprite art/board/exit_notch.png — накладка выреза для плат БЕЗ
 │   │   │   │                  запечённого кармана; на Board_full.png active=false, не удалять —
@@ -80,15 +82,22 @@ Canvas
 │                              конфликтует; в лендскейпе проверить отдельно на Шаге 6.1, там вертикаль
 │                              сжата, а LayoutAdapter увеличивает плату)                [DisclaimerView]
 ├── CTAOverlay                (active=true — [CTAView] само висит здесь, см. заметку ниже)
-│   ├── Dim                   (Sprite art/bg/bg_blur.png — подложка пэкшота вместо чёрного scrim,
-│   │                          решение 0.10 / §8.4 плана; fullscreen; active=false до показа CTA)
-│   └── Panel                 (panel.png; active=false до показа CTA)
-│       ├── FreecashLogo      (Sprite art/ui/freecash_logo.png — реальный логотип вместо cc.Label
-│       │                      "FREE CASH", план 5.8)
-│       ├── TitleLabel        ("LEVEL COMPLETE")
-│       └── PlayButton        (кастомная широкая кнопка "PLAY & EARN", рисуем сами на базе
-│                              panel.png + btn_base.png — план §4.3 №1 / Шаг 1.3; финальное имя
-│                              файла фиксирует cocos-asset-maker)
+│   ├── PackshotBg            (Sprite art/bg/bg_blur.png — размытый игровой фон как подложка пэкшота;
+│   │                          contentSize 1376×768, cover-fit через LayoutAdapter.packshotBg;
+│   │                          active=false до показа CTA. Присланный дизайнером packshot/bg.png
+│   │                          (992×1586, 1.67 MB) НЕ используется — см. NEW_ASSETS_INTEGRATION_PLAN.md
+│   │                          §9 «Отклонения»; нода по-прежнему привязана к CTAView.dimNode)
+│   └── Panel                 (пустая нода-контейнер, БЕЗ Sprite; active=false до показа CTA.
+│                              Позиции детей — NEW_ASSETS_INTEGRATION_PLAN.md §3.3, design-units)
+│       ├── Logo              (art/packshot/logo.png  592.4×198.5  pos (-1.6, 468.1))
+│       ├── CenterGroup       (пустая нода-группа 649.7×788.4 — в landscape её целиком масштабирует
+│       │   │                  LayoutAdapter.ctaCenterGroup; в portrait scale = 1)
+│       │   ├── YouWon        (art/packshot/you_won.png  649.7×227.6  pos (0.4, 234.0))
+│       │   ├── Gift          (art/packshot/gift.png     347.8×389.0  pos (-4.4, -33.9))
+│       │   └── Bonus         (art/packshot/bonus_10.png 364.0×230.0  pos (-2.0, -325.6)
+│       │                      — «$10» и «SIGN UP BONUS» одним кадром, отдельного Label нет)
+│       └── PlayButton        (art/packshot/btn_play_earn.png 545.6×154.1 pos (5.6, -538.7))
+│                              [Button + ButtonPressView]
 └── GameManager
     ├── GameEntryPoint        [GameConfig, GameEntryPoint]
     ├── Systems
@@ -145,15 +154,28 @@ Canvas
 | `BottomBarView.hintBadgeLabel` | `.../BottomBar/HintButton/HintBadgeLabel` (Label) |
 | `BottomBarView.pauseButton` | `.../BottomBar/PauseButton` (Button) |
 | `LayoutAdapter.bottomBar` | `.../SafeArea/BottomBar` |
-| `CTAView.dimNode` | `CTAOverlay/Dim` |
+| `CTAView.dimNode` | `CTAOverlay/PackshotBg` |
 | `CTAView.panelNode` | `CTAOverlay/Panel` |
-| `CTAView.logoNode` | `CTAOverlay/Panel/FreecashLogo` |
-| `CTAView.titleLabel` | `CTAOverlay/Panel/TitleLabel` (Label) |
+| `CTAView.logoNode` | `CTAOverlay/Panel/Logo` |
 | `CTAView.playButton` | `CTAOverlay/Panel/PlayButton` (Button) |
+| `LayoutAdapter.packshotBg` | `CTAOverlay/PackshotBg` — cover-fit по своему raw-размеру |
+| `LayoutAdapter.ctaLogo` | `CTAOverlay/Panel/Logo` — в landscape уезжает в левую колонку |
+| `LayoutAdapter.ctaPlayButton` | `CTAOverlay/Panel/PlayButton` — в landscape в правую колонку |
+| `LayoutAdapter.ctaCenterGroup` | `CTAOverlay/Panel/CenterGroup` — в landscape scale-to-fit |
+| `BlockView.len2HObstFrame` | `art/blocks/block_len2_h_obst.png` (sprite-frame) |
+| `BlockView.len3HObstFrame` | `art/blocks/block_len3_h_obst.png` (sprite-frame) |
+| `BlockView.len2VObstFrame` | `art/blocks/block_len2_v_obst.png` (sprite-frame) |
+| `BlockView.len3VObstFrame` | `art/blocks/block_len3_v_obst.png` (sprite-frame) |
+| `BlockView.mainFrame` | `art/blocks/block_len2_h_main.png` (sprite-frame) |
 
 **Удалено из wiring** (план §4.2/5.9): `RewardSystem.config`, `BoardView.cellPrefab`,
 `BoardView.cellsContainer`, `BoardView.exitArrow` (заменён на `exitNotch`/`exitArrows` выше),
 `MoneyFountainView.*`, `CoinCounterView.label`, `CTAView.fcLabel`.
+
+**Удалено на интеграции новых ассетов** (`NEW_ASSETS_INTEGRATION_PLAN.md` §4 Фаза B/C):
+`CTAView.titleLabel` (нода `TitleLabel` «LEVEL COMPLETE» убрана — текст теперь запечён в
+`you_won.png`; свойство удалено и из `CTAView.ts`), старые `BlockView.len{2,3}{Obst,Main}Frame`
+(заменены пятёркой кадров выше), `BlockView.tileFrame`/`mainFrame` 9-slice-эпохи.
 
 ## Placeholder-политика
 - Ассеты без UUID (напр. клиентский логотип) → `@property = null` + запись в `OPEN_ISSUES.md` как ручной шаг.
