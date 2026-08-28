@@ -53,6 +53,12 @@ export class LayoutAdapter extends Component {
     @property(Node)
     public backgroundNode: Node | null = null;
 
+    // Фон пэкшота (CTAOverlay/PackshotBg) — та же cover-fit формула, что у backgroundNode, но
+    // считается по своему собственному raw-размеру: пэкшот уже единственный слой на CTAOverlay
+    // и не участвует в portrait/landscape композиции доски, ему нужен только cover.
+    @property(Node)
+    public packshotBg: Node | null = null;
+
     // Обёртка платы: её двигаем/масштабируем целиком.
     @property(Node)
     public boardArea: Node | null = null;
@@ -119,6 +125,7 @@ export class LayoutAdapter extends Component {
 
     // Portrait-база, захваченная один раз из сцены (см. captureBaseline).
     private backgroundSize = new Size(DESIGN_WIDTH, DESIGN_HEIGHT);
+    private packshotBgSize = new Size(DESIGN_WIDTH, DESIGN_HEIGHT);
     private boardAreaBase: NodeBaseline | null = null;
     private boardFrameBase: NodeBaseline | null = null;
     // Смещение центра boardFrame относительно начала координат boardArea при scale = 1.
@@ -135,6 +142,7 @@ export class LayoutAdapter extends Component {
         // Widget пересчитывал бы фон/HUD каждый кадр и конфликтовал с ручным layout ниже — с этого
         // момента и portrait, и landscape целиком ведёт этот компонент.
         this.disableWidget(this.backgroundNode);
+        this.disableWidget(this.packshotBg);
         this.disableWidget(this.hudLayer);
         // У BottomBar Widget (align bottom) НЕ выключаем насовсем: в portrait он прижимает бар к
         // реальному низу экрана на аппаратах выше 9:16 — авторское поведение, его не трогаем. Гасим
@@ -156,6 +164,10 @@ export class LayoutAdapter extends Component {
         const bgTransform = this.backgroundNode?.getComponent(UITransform);
         if (bgTransform) {
             this.backgroundSize = bgTransform.contentSize.clone();
+        }
+        const packshotBgTransform = this.packshotBg?.getComponent(UITransform);
+        if (packshotBgTransform) {
+            this.packshotBgSize = packshotBgTransform.contentSize.clone();
         }
         this.boardAreaBase = this.boardArea ? new NodeBaseline(this.boardArea) : null;
         this.boardFrameBase = this.boardFrame ? new NodeBaseline(this.boardFrame) : null;
@@ -214,6 +226,16 @@ export class LayoutAdapter extends Component {
             );
             this.backgroundNode.setScale(coverScale, coverScale, 1);
             this.backgroundNode.setPosition(0, 0, 0);
+        }
+
+        // Пэкшот-фон — та же cover-fit формула, отдельная база размера (см. captureBaseline).
+        if (this.packshotBg) {
+            const packshotCoverScale = Math.max(
+                (visibleHalfWidth * 2) / this.packshotBgSize.width,
+                (visibleHalfHeight * 2) / this.packshotBgSize.height,
+            );
+            this.packshotBg.setScale(packshotCoverScale, packshotCoverScale, 1);
+            this.packshotBg.setPosition(0, 0, 0);
         }
 
         // Дисклеймер стоит на авторской portrait-позиции в обеих ориентациях (GDD §3, план §8.1) —
