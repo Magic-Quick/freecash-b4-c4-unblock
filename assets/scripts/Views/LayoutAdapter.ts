@@ -6,48 +6,45 @@ const { ccclass, property } = _decorator;
 // ниже, чтобы не разойтись с настройкой движка, если её когда-нибудь поменяют.
 const DESIGN_WIDTH = 720;
 const DESIGN_HEIGHT = 1280;
-// Паддинг платы в portrait — расстояние от края GameplayLayer до края видимой области по ширине.
-// Текущая плата (DESIGN_UPDATE_PLAN.md §2, ревизия 4): Board_full.png 755×679 натянута на
-// contentSize 640×600 на канвасе 720×1280, т.е. (720 - 640) / 2 = 40, соотношение 40/720.
-// BOARD_MARGIN_RATIO сам по себе нигде не пересчитывается кодом — portrait-геометрия платы берётся из
-// авторской позиции сцены (captureBaseline); константа документирует происхождение BOARD_WIDTH_DESIGN.
-// В landscape этот паддинг больше не переносится напрямую на высоту (QA-фикс наезда платы на bottomBar)
-// — см. LANDSCAPE_BOARD_TOP_MARGIN/_BOTTOM_GAP ниже, у которых теперь своя, независимая от
-// BOARD_MARGIN_RATIO формула.
-const BOARD_WIDTH_DESIGN = 640;
-const BOARD_MARGIN_RATIO = (DESIGN_WIDTH - BOARD_WIDTH_DESIGN) / 2 / DESIGN_WIDTH;
-// Итерация 4 (по запросу владельца): не высчитываем "ширину колонки" под конкретный aspect ratio —
-// на телефоне и планшете landscape выглядит по-разному (у планшета aspect ближе к 4:3, у телефона
-// может доходить до ~2:1), а фиксированный паддинг в дизайн-единицах работает одинаково хорошо на обоих,
-// т.к. и так пересчитывается через уже существующую формулу visibleHalfWidth/orthoHeight ниже.
-const LANDSCAPE_BOARD_LEFT_PADDING = 40;
-const LANDSCAPE_HUD_LEFT_PADDING = 650;
-// Landscape vertical budget for boardArea (QA-фикс: увеличенная плата наезжала на bottomBar — плата
-// центрировалась в (0,0) на полную дизайн-высоту 1280, игнорируя фиксированную полосу бара внизу экрана).
-// В landscape сверху экрана ничего нет (HUD ушёл в левую колонку), поэтому верхний отступ — небольшой
-// фиксированный инсет; нижний — обязан оставить видимый зазор до верхнего края bottomBar (тот остаётся на
-// своей portrait-позиции и в landscape, см. applyLayout — истинный нижний край экрана в landscape всегда
-// ровно -DESIGN_HEIGHT/2, тот же ноль отсчёта, от которого автор изначально разместил бар в portrait).
-const LANDSCAPE_BOARD_TOP_MARGIN = 40;
-const LANDSCAPE_BOARD_BOTTOM_GAP = 40;
-// HUD-панели в дизайне мелкие относительно освободившегося в landscape пространства — владелец попросил
-// визуально укрупнить. Масштабируем весь hudLayer целиком (не каждую панель по отдельности) — так
-// вместе с размером панелей пропорционально растёт и интервал между ними, без отдельной константы spacing.
-const LANDSCAPE_HUD_SCALE = 1.5;
 
-// Portrait/landscape adaptive layout (IMPLEMENTATION_PHASES.md §Фаза 3 п.6, трижды доработано в Фазе 6 —
-// подробная история итераций 1–2 (зум → леттербокс-полосы → orthoHeight без полос) в
-// IMPLEMENTATION_PHASES.md). Итерация 3 (текущая) — по прямому запросу владельца: убрать остаточную
-// полосу в portrait (единой cover-fit формулой для фона, той же что и раньше давала бы полосы) и
-// реализовать реальную landscape-композицию: фон растягивается по ширине и обрезается по высоте (cover),
-// плата увеличивается (паддинг по бокам в portrait становится паддингом сверху/снизу в landscape), HUD
-// перестраивается в колонку слева.
+// Снимок трансформа ноды, снятый один раз в onLoad (до первого applyLayout). Нужен по двум причинам:
+// 1) вернуть portrait-раскладку без дублирования авторских координат числами в коде;
+// 2) мерить колонки по «чистому» размеру — у кнопок ButtonPressView тви́нит node.scale на нажатии,
+//    поэтому читать живой scale во время layout нельзя.
+class NodeBaseline {
+    public readonly position: Vec3;
+    public readonly scale: Vec3;
+    public readonly angle: number;
+    public readonly width: number;
+    public readonly height: number;
+
+    constructor(node: Node) {
+        this.position = node.position.clone();
+        this.scale = node.scale.clone();
+        this.angle = node.angle;
+        const transform = node.getComponent(UITransform);
+        // Габарит колонки считаем по contentSize с учётом собственного масштаба ноды из сцены
+        // (у ChevronNext он 1.2), но БЕЗ поворота: чевron почти квадратный, разница на глаз не видна.
+        this.width = (transform?.contentSize.width ?? 0) * Math.abs(this.scale.x);
+        this.height = (transform?.contentSize.height ?? 0) * Math.abs(this.scale.y);
+    }
+}
+
+// Portrait/landscape adaptive layout (IMPLEMENTATION_PHASES.md §Фаза 3 п.6).
 //
-// Механика: `boardArea` — обёртка над GameplayLayer/TutorialLayer/FxLayer (Фаза 6, реструктуризация
-// сцены), масштабируется и двигается как единое целое, чтобы CellsContainer/BlocksContainer/TutorialFinger/
-// MoneyFountain остались в одной системе координат друг с другом. Portrait-позиции/размеры HUD, фона и
-// boardArea читаются из сцены ОДИН раз в onLoad (до первого applyLayout) и используются как база для
-// восстановления при возврате в portrait — не дублируем их числами в коде.
+// Portrait — авторская раскладка сцены один-в-один (позиции читаются из сцены в onLoad, см.
+// captureBaseline), меняется только cover-fit фона и orthoHeight камеры на узких экранах.
+//
+// Landscape — самостоятельная композиция в три колонки (ревизия 5, по запросу владельца):
+//   [ HudLayer ]  [ плата на всю высоту экрана ]  [ кнопки BottomBar ]
+// HudLayer и BottomBar перестраиваются из горизонтальных рядов в вертикальные, плата растягивается
+// на весь вертикальный бюджет экрана и по возможности стоит ровно по центру по X.
+//
+// Механика: `boardArea` — обёртка над GameplayLayer/TutorialLayer/FxLayer, масштабируется и двигается
+// как единое целое, чтобы CellsContainer/BlocksContainer/TutorialFinger/MoneyFountain остались в одной
+// системе координат друг с другом. Масштаб платы считается по `boardFrame` (реальный видимый
+// прямоугольник платы 640×600), а НЕ по UITransform GameplayLayer (680×760) — тот заметно больше
+// содержимого, и подгонка по нему съедала ~20% высоты экрана впустую.
 @ccclass('LayoutAdapter')
 export class LayoutAdapter extends Component {
     @property(Camera)
@@ -56,51 +53,93 @@ export class LayoutAdapter extends Component {
     @property(Node)
     public backgroundNode: Node | null = null;
 
+    // Обёртка платы: её двигаем/масштабируем целиком.
     @property(Node)
     public boardArea: Node | null = null;
 
+    // Видимый прямоугольник платы внутри boardArea — эталон для расчёта масштаба и центровки.
     @property(Node)
-    public gameplayLayer: Node | null = null;
+    public boardFrame: Node | null = null;
 
     @property(Node)
     public hudLayer: Node | null = null;
 
-    @property(Node)
-    public hudLevelPanel: Node | null = null;
+    // Содержимое HUD в порядке СВЕРХУ ВНИЗ для landscape-колонки (в portrait позиции берутся из сцены).
+    // Порядок задаётся в инспекторе — менять композицию можно без правки кода.
+    @property({ type: [Node], tooltip: 'HUD в landscape: сверху вниз' })
+    public hudColumn: Node[] = [];
 
-    @property(Node)
-    public hudMovesPanel: Node | null = null;
-
-    // Нижний бар (4 кнопки) и дисклеймер — фиксированный "chrome" внизу экрана, не часть платы/HUD
+    // Нижний бар (кнопки) и дисклеймер — фиксированный "chrome", не часть платы/HUD
     // (DESIGN_UPDATE_PLAN.md §5 Шаг 4.8, §8.1). Оба живут прямо под SafeArea, не внутри hudLayer.
     @property(Node)
     public bottomBar: Node | null = null;
 
+    // Кнопки бара в порядке СВЕРХУ ВНИЗ для landscape-колонки.
+    @property({ type: [Node], tooltip: 'Кнопки в landscape: сверху вниз' })
+    public buttonColumn: Node[] = [];
+
     @property(Node)
     public disclaimer: Node | null = null;
+
+    // Декоративный чеврон между панелями HUD: в portrait смотрит вправо (панели в ряд), в landscape
+    // разворачиваем вниз (панели в колонку).
+    @property(Node)
+    public chevronNext: Node | null = null;
+
+    // --- Тюнинг landscape (всё в дизайн-единицах, правится в инспекторе) ---
+
+    @property({ tooltip: 'landscape: отступ платы от верха экрана' })
+    public landscapeBoardTopMargin = 30;
+
+    @property({ tooltip: 'landscape: зазор платы до дисклеймера/низа экрана' })
+    public landscapeBoardBottomMargin = 24;
+
+    @property({ tooltip: 'landscape: отступ боковых колонок от края экрана' })
+    public landscapeEdgePadding = 30;
+
+    @property({ tooltip: 'landscape: зазор между платой и боковой колонкой' })
+    public landscapeColumnGap = 36;
+
+    @property({ tooltip: 'landscape: вертикальный интервал между элементами HUD' })
+    public landscapeHudSpacing = 32;
+
+    @property({ tooltip: 'landscape: масштаб колонки HUD' })
+    public landscapeHudScale = 1;
+
+    @property({ tooltip: 'landscape: вертикальный интервал между кнопками' })
+    public landscapeButtonSpacing = 36;
+
+    @property({ tooltip: 'landscape: масштаб колонки кнопок' })
+    public landscapeButtonScale = 1.1;
+
+    @property({ tooltip: 'landscape: поворот чеврона (право → вниз)' })
+    public landscapeChevronAngle = -90;
 
     private readonly _onResize = this.onResize.bind(this);
 
     // Portrait-база, захваченная один раз из сцены (см. captureBaseline).
     private backgroundSize = new Size(DESIGN_WIDTH, DESIGN_HEIGHT);
-    private boardAreaPos = new Vec3();
-    private gameplayLayerWidth = 0;
-    private gameplayLayerHeight = 0;
-    private hudLayerPos = new Vec3();
-    private hudLevelPanelPos = new Vec3();
-    private hudMovesPanelPos = new Vec3();
-    private bottomBarPos = new Vec3();
-    private disclaimerPos = new Vec3();
-    // Верхний край bottomBar на его portrait-позиции (та же и в landscape — см. LANDSCAPE_BOARD_TOP_MARGIN
-    // выше) — используется как нижняя граница вертикального бюджета платы в landscape.
-    private bottomBarTopY = 0;
+    private boardAreaBase: NodeBaseline | null = null;
+    private boardFrameBase: NodeBaseline | null = null;
+    // Смещение центра boardFrame относительно начала координат boardArea при scale = 1.
+    private boardFrameOffset = new Vec3();
+    private hudLayerBase: NodeBaseline | null = null;
+    private bottomBarBase: NodeBaseline | null = null;
+    private disclaimerBase: NodeBaseline | null = null;
+    private hudColumnBase: NodeBaseline[] = [];
+    private buttonColumnBase: NodeBaseline[] = [];
+    private bottomBarWidget: Widget | null = null;
 
     protected onLoad(): void {
         this.captureBaseline();
-        // Widget пересчитывал бы HUD/фон каждый кадр и конфликтовал с ручным layout ниже — с этого
+        // Widget пересчитывал бы фон/HUD каждый кадр и конфликтовал с ручным layout ниже — с этого
         // момента и portrait, и landscape целиком ведёт этот компонент.
         this.disableWidget(this.backgroundNode);
         this.disableWidget(this.hudLayer);
+        // У BottomBar Widget (align bottom) НЕ выключаем насовсем: в portrait он прижимает бар к
+        // реальному низу экрана на аппаратах выше 9:16 — авторское поведение, его не трогаем. Гасим
+        // только на время landscape, где бар уезжает в правую колонку (см. applyPortrait/applyLandscape).
+        this.bottomBarWidget = this.bottomBar?.getComponent(Widget) ?? null;
         view.on('canvas-resize', this._onResize, this);
         this.applyLayout();
     }
@@ -118,31 +157,28 @@ export class LayoutAdapter extends Component {
         if (bgTransform) {
             this.backgroundSize = bgTransform.contentSize.clone();
         }
-        if (this.boardArea) {
-            this.boardAreaPos = this.boardArea.position.clone();
+        this.boardAreaBase = this.boardArea ? new NodeBaseline(this.boardArea) : null;
+        this.boardFrameBase = this.boardFrame ? new NodeBaseline(this.boardFrame) : null;
+        this.hudLayerBase = this.hudLayer ? new NodeBaseline(this.hudLayer) : null;
+        this.bottomBarBase = this.bottomBar ? new NodeBaseline(this.bottomBar) : null;
+        this.disclaimerBase = this.disclaimer ? new NodeBaseline(this.disclaimer) : null;
+        this.hudColumnBase = this.hudColumn.map((node) => new NodeBaseline(node));
+        this.buttonColumnBase = this.buttonColumn.map((node) => new NodeBaseline(node));
+        if (this.boardFrame && this.boardArea) {
+            this.boardFrameOffset = LayoutAdapter.offsetWithin(this.boardFrame, this.boardArea);
         }
-        const gameplayTransform = this.gameplayLayer?.getComponent(UITransform);
-        if (gameplayTransform) {
-            this.gameplayLayerWidth = gameplayTransform.contentSize.width;
-            this.gameplayLayerHeight = gameplayTransform.contentSize.height;
+    }
+
+    // Сумма локальных позиций по цепочке родителей до ancestor. Промежуточные ноды внутри boardArea
+    // (GameplayLayer) стоят без своего масштаба и поворота, поэтому простого сложения достаточно.
+    private static offsetWithin(node: Node, ancestor: Node): Vec3 {
+        const offset = new Vec3();
+        let current: Node | null = node;
+        while (current && current !== ancestor) {
+            offset.add(current.position);
+            current = current.parent;
         }
-        if (this.hudLayer) {
-            this.hudLayerPos = this.hudLayer.position.clone();
-        }
-        if (this.hudLevelPanel) {
-            this.hudLevelPanelPos = this.hudLevelPanel.position.clone();
-        }
-        if (this.hudMovesPanel) {
-            this.hudMovesPanelPos = this.hudMovesPanel.position.clone();
-        }
-        if (this.bottomBar) {
-            this.bottomBarPos = this.bottomBar.position.clone();
-            const bottomBarTransform = this.bottomBar.getComponent(UITransform);
-            this.bottomBarTopY = this.bottomBarPos.y + (bottomBarTransform?.contentSize.height ?? 0) / 2;
-        }
-        if (this.disclaimer) {
-            this.disclaimerPos = this.disclaimer.position.clone();
-        }
+        return offset;
     }
 
     private disableWidget(node: Node | null): void {
@@ -180,63 +216,148 @@ export class LayoutAdapter extends Component {
             this.backgroundNode.setPosition(0, 0, 0);
         }
 
-        // Нижний бар и дисклеймер — та же portrait-позиция в обеих ориентациях (DESIGN_UPDATE_PLAN.md
-        // §8.1/§5 Шаг 4.8). В landscape камера держит orthoHeight = DESIGN_HEIGHT/2 (см. выше — для
-        // landscape 360/screenAspect всегда < 640), т.е. видимая высота равна дизайн-канвасу так же, как
-        // и в portrait с "родным" 9:16 — авторская позиция остаётся у нижнего края без досчёта. На более
-        // высоких, чем 9:16, portrait-экранах открывается дополнительное поле сверху/снизу (как и у
-        // остальных элементов ниже) — бар/дисклеймер при этом просто не касаются самого края, что не
-        // ломает требование «всегда видимы» (GDD §3, план §8.1).
-        this.bottomBar?.setPosition(this.bottomBarPos);
-        this.disclaimer?.setPosition(this.disclaimerPos);
+        // Дисклеймер стоит на авторской portrait-позиции в обеих ориентациях (GDD §3, план §8.1) —
+        // в landscape камера держит orthoHeight = DESIGN_HEIGHT/2, т.е. видимая высота равна
+        // дизайн-канвасу так же, как и в portrait 9:16, и он остаётся у нижнего края экрана.
+        if (this.disclaimerBase) {
+            this.disclaimer?.setPosition(this.disclaimerBase.position);
+        }
 
         if (isLandscape) {
-            this.applyLandscape(visibleHalfWidth);
+            this.applyLandscape(visibleHalfWidth, visibleHalfHeight);
         } else {
             this.applyPortrait();
         }
     }
 
     private applyPortrait(): void {
-        this.boardArea?.setScale(1, 1, 1);
-        this.boardArea?.setPosition(this.boardAreaPos);
-        if (this.hudLayer) {
-            this.hudLayer.setPosition(this.hudLayerPos);
-            this.hudLayer.setScale(1, 1, 1);
+        if (this.boardArea && this.boardAreaBase) {
+            this.boardArea.setScale(this.boardAreaBase.scale);
+            this.boardArea.setPosition(this.boardAreaBase.position);
         }
-        this.hudLevelPanel?.setPosition(this.hudLevelPanelPos);
-        this.hudMovesPanel?.setPosition(this.hudMovesPanelPos);
+        if (this.hudLayer && this.hudLayerBase) {
+            this.hudLayer.setPosition(this.hudLayerBase.position);
+            this.hudLayer.setScale(this.hudLayerBase.scale);
+        }
+        if (this.bottomBarWidget) {
+            // Возвращаем авторское поведение: бар сам прижимается к низу экрана.
+            this.bottomBarWidget.enabled = true;
+        }
+        if (this.bottomBar && this.bottomBarBase) {
+            this.bottomBar.setPosition(this.bottomBarBase.position);
+            this.bottomBar.setScale(this.bottomBarBase.scale);
+        }
+        LayoutAdapter.restoreColumn(this.hudColumn, this.hudColumnBase);
+        LayoutAdapter.restoreColumn(this.buttonColumn, this.buttonColumnBase);
     }
 
-    // Итерация 4 (по запросу владельца): не резервируем отдельную "ширину HUD-колонки" — плата просто
-    // получает небольшой фиксированный отступ слева (LANDSCAPE_BOARD_LEFT_PADDING) и использует всё
-    // остальное пространство; HUD висит у левого края с собственным (независимым) отступом и увеличенным
-    // масштабом для читаемости. Оба паддинга — фиксированные дизайн-единицы, поэтому одинаково работают
-    // и на "вытянутом" телефонном landscape, и на более квадратном планшетном — без отдельной ветки под
-    // класс устройства: пересчёт всё равно идёт через уже адаптивный visibleHalfWidth ниже.
-    private applyLandscape(visibleHalfWidth: number): void {
-        if (this.boardArea && this.gameplayLayerHeight > 0 && this.gameplayLayerWidth > 0) {
-            // Вертикальный бюджет платы фиксирован (зависит только от ориентации, не от текущего aspect
-            // ratio — visibleHalfHeight в landscape всегда 640, см. applyLayout), но, в отличие от старой
-            // симметричной формулы, границы не равны: сверху — только небольшой инсет (нечем перекрывать),
-            // снизу — обязательный зазор до bottomBar (см. LANDSCAPE_BOARD_TOP_MARGIN/_BOTTOM_GAP выше).
-            const topY = DESIGN_HEIGHT / 2 - LANDSCAPE_BOARD_TOP_MARGIN;
-            const bottomY = this.bottomBarTopY + LANDSCAPE_BOARD_BOTTOM_GAP;
-            const availableHeight = topY - bottomY;
-            const scale = availableHeight / this.gameplayLayerHeight;
-            this.boardArea.setScale(scale, scale, 1);
-            // Левый край платы — ровно LANDSCAPE_BOARD_LEFT_PADDING от левого края экрана.
-            const boardHalfWidth = (this.gameplayLayerWidth / 2) * scale;
-            this.boardArea.setPosition(0, (topY + bottomY) / 2, 0);
+    private static restoreColumn(nodes: Node[], baselines: NodeBaseline[]): void {
+        for (let i = 0; i < nodes.length && i < baselines.length; i++) {
+            nodes[i].setPosition(baselines[i].position);
+            nodes[i].angle = baselines[i].angle;
         }
+    }
+
+    // Landscape-композиция: HUD-колонка слева, плата по центру на всю доступную высоту, колонка кнопок
+    // справа. Ширины колонок НЕ захардкожены — меряются по contentSize реального содержимого, поэтому
+    // добавление/удаление панели или кнопки в сцене автоматически меняет геометрию.
+    private applyLandscape(visibleHalfWidth: number, visibleHalfHeight: number): void {
+        if (!this.boardArea || !this.boardFrameBase) {
+            return;
+        }
+
+        // --- 1. Вертикальный бюджет платы: от верха экрана до верхней кромки дисклеймера.
+        const topY = visibleHalfHeight - this.landscapeBoardTopMargin;
+        const disclaimerTopY = this.disclaimerBase
+            ? this.disclaimerBase.position.y + this.disclaimerBase.height / 2
+            : -visibleHalfHeight;
+        const bottomY = Math.max(
+            -visibleHalfHeight + this.landscapeBoardBottomMargin,
+            disclaimerTopY + this.landscapeBoardBottomMargin,
+        );
+        const availableHeight = Math.max(1, topY - bottomY);
+
+        // --- 2. Колонки меряем ДО платы: их ширина — вычет из горизонтального бюджета.
+        const hudSize = LayoutAdapter.measureColumn(this.hudColumnBase, this.landscapeHudSpacing, this.landscapeHudScale);
+        const buttonSize = LayoutAdapter.measureColumn(this.buttonColumnBase, this.landscapeButtonSpacing, this.landscapeButtonScale);
+        const sideBudget =
+            this.landscapeEdgePadding * 2 +
+            hudSize.width +
+            buttonSize.width +
+            this.landscapeColumnGap * 2;
+        const availableWidth = Math.max(1, visibleHalfWidth * 2 - sideBudget);
+
+        // --- 3. Масштаб платы — по более жёсткому из двух ограничений (обычно это высота).
+        const scale = Math.min(availableHeight / this.boardFrameBase.height, availableWidth / this.boardFrameBase.width);
+        const frameHalfWidth = (this.boardFrameBase.width * scale) / 2;
+
+        // Плата стоит ровно по центру экрана, пока это не выдавливает колонку за край; на «квадратных»
+        // planshet-landscape (4:3) бюджета не хватает и композиция уплотняется — тогда центр съезжает
+        // ровно настолько, чтобы обе колонки уместились с их отступами от края.
+        const minFrameX = -visibleHalfWidth + this.landscapeEdgePadding + hudSize.width + this.landscapeColumnGap + frameHalfWidth;
+        const maxFrameX = visibleHalfWidth - this.landscapeEdgePadding - buttonSize.width - this.landscapeColumnGap - frameHalfWidth;
+        const frameX = Math.min(Math.max(0, minFrameX), maxFrameX);
+        const frameY = (topY + bottomY) / 2;
+
+        // boardArea двигаем так, чтобы центр boardFrame попал в (frameX, frameY): собственное смещение
+        // рамки внутри обёртки тоже масштабируется.
+        this.boardArea.setScale(scale, scale, 1);
+        this.boardArea.setPosition(frameX - this.boardFrameOffset.x * scale, frameY - this.boardFrameOffset.y * scale, 0);
+
+        // --- 4. Колонки прижимаются к плате с одинаковым зазором и центрируются по её вертикали.
         if (this.hudLayer) {
-            this.hudLayer.setPosition(0 - LANDSCAPE_HUD_LEFT_PADDING, 0, 0);
-            this.hudLayer.setScale(LANDSCAPE_HUD_SCALE, LANDSCAPE_HUD_SCALE, 1);
+            this.hudLayer.setPosition(frameX - frameHalfWidth - this.landscapeColumnGap - hudSize.width / 2, frameY, 0);
+            this.hudLayer.setScale(this.landscapeHudScale, this.landscapeHudScale, 1);
         }
-        // Колонка: LevelPanel сверху, MovesPanel (декор) — снизу. Локальные позиции внутри hudLayer не
-        // меняются — интервал между панелями растёт вместе с масштабом hudLayer выше, отдельная константа
-        // spacing не нужна.
-        this.hudLevelPanel?.setPosition(0, 200, 0);
-        this.hudMovesPanel?.setPosition(0, 0, 0);
+        LayoutAdapter.stackColumn(this.hudColumn, this.hudColumnBase, this.landscapeHudSpacing);
+
+        if (this.bottomBarWidget) {
+            // Иначе Widget каждый кадр возвращал бы бар вниз экрана и ломал правую колонку.
+            this.bottomBarWidget.enabled = false;
+        }
+        if (this.bottomBar) {
+            this.bottomBar.setPosition(frameX + frameHalfWidth + this.landscapeColumnGap + buttonSize.width / 2, frameY, 0);
+            this.bottomBar.setScale(this.landscapeButtonScale, this.landscapeButtonScale, 1);
+        }
+        LayoutAdapter.stackColumn(this.buttonColumn, this.buttonColumnBase, this.landscapeButtonSpacing);
+
+        if (this.chevronNext) {
+            this.chevronNext.angle = this.landscapeChevronAngle;
+        }
+    }
+
+    // Габарит вертикальной колонки в экранных единицах: ширина — по самому широкому элементу,
+    // высота — сумма высот плюс интервалы между ними.
+    private static measureColumn(baselines: NodeBaseline[], spacing: number, scale: number): Size {
+        let width = 0;
+        let height = 0;
+        for (const baseline of baselines) {
+            width = Math.max(width, baseline.width);
+            height += baseline.height;
+        }
+        if (baselines.length > 1) {
+            height += spacing * (baselines.length - 1);
+        }
+        return new Size(width * scale, height * scale);
+    }
+
+    // Раскладывает элементы колонки сверху вниз в ЛОКАЛЬНЫХ координатах контейнера (масштаб контейнера
+    // уже применён снаружи), центрируя стопку относительно его начала координат.
+    private static stackColumn(nodes: Node[], baselines: NodeBaseline[], spacing: number): void {
+        const count = Math.min(nodes.length, baselines.length);
+        if (count === 0) {
+            return;
+        }
+        let totalHeight = spacing * (count - 1);
+        for (let i = 0; i < count; i++) {
+            totalHeight += baselines[i].height;
+        }
+        let cursorY = totalHeight / 2;
+        for (let i = 0; i < count; i++) {
+            const half = baselines[i].height / 2;
+            cursorY -= half;
+            nodes[i].setPosition(0, cursorY, 0);
+            cursorY -= half + spacing;
+        }
     }
 }
