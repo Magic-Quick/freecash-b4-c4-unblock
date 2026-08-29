@@ -248,18 +248,20 @@ git (коммит `d24b437`, файл `assets/art/new assets/packshot/bg.png`).
   `assets/art/ui/white_pixel.png` (4×4 RGBA, сплошной белый) — тонируется через `_color` ноды, как и было
   задумано. `logoNode`/`FreecashLogo` см. #2 выше. Оба фикса прошли `validate_document` (сцена, 155 объектов,
   0 ошибок) — визуально не перепроверялись в Preview (см. правило про устаревшую вкладку сцены ниже).
-- **Звук (обновлено):** `SoundSystem` больше не stub — подключены 6 P0 SFX из `AUDIO_GENERATION_PLAN.md`
-  (`block_slide`/`block_blocked`/`path_clear`/`main_drive`/`exit_whoosh`/`coin_fly`), сгенерированы через
-  ElevenLabs `generate_audio`. `SoundSystem` подписан прямо на доменные `EVT_*` (не на `EVT_PLAY_SOUND` —
-  тот остался незадействованным, предпочтительный вариант из плана §7), throttle на `block_slide`/
-  `block_blocked` — новые `GameConfig.sfxBlockSlideMinInterval`/`sfxBlockBlockedMinInterval`. Гейт на
-  `Playbox.is_muted()`/`Playbox.is_audio()` перед каждым `playOneShot`. Вес аудио 112 KB (бюджет плана —
-  450 KB на SFX). Осталось: (a) подтвердить права коммерческого использования генератора и зафиксировать
-  ссылку/дату — GDD §6; (b) P1 (`coin_count`/`level_complete`/`final_fanfare`/`cta_tap`) не генерировались —
-  решить, нужны ли; (c) кнопка mute/unmute из OPEN_ISSUES #9 всё ещё не создана — теперь особенно актуальна,
-  т.к. звук реально играет, а без видимой кнопки Moloco блокирует билд при `start_muted=true`; (d) не
-  проверялось в реальном Preview с звуком (звук требует пользовательского жеста в браузере — структурно
-  гарантировано тем, что SFX триггерятся только из свайпа/геймплея, но не подтверждено вручную).
+- **Звук (обновлено 2026-08-29, candy-reskin v2):** `SoundSystem` подключён на 5 P0 SFX v2
+  (`block_slide`/`block_blocked`/`path_clear`/`main_drive`/`exit_whoosh`) — старый `coin_fly` не переносился,
+  т.к. вся `RewardSystem`/`EVT_COINS_CHANGED`-ветка вырезана по #5 выше, звуку награды подписываться не на
+  что. Новый `Systems/MusicSystem.ts` добавляет looped gameplay-музыку (старт на первый `EVT_TAP`) и
+  one-shot packshot-sting на `EVT_REQUEST_CTA` с fade-out лупа — см. `AUDIO_GENERATION_PLAN.md` секцию
+  «v2-набор подключен в Cocos» за деталями wiring. Throttle на `block_slide`/`block_blocked` и гейт на
+  `Playbox.is_muted()`/`Playbox.is_audio()` не менялись. Вес подключённых аудио — 494 KB (бюджет плана —
+  550 KB). Осталось: (a) подтвердить права коммерческого использования генератора и зафиксировать
+  ссылку/дату — GDD §6; (b) `coin-count-v2`/`level-complete-v2`/`final-fanfare-v2` сгенерированы, но
+  остались сиротами без событий-триггеров — решить, нужен ли им новый дом, или считать не актуальными;
+  `cta-tap-v2` остаётся P2/best-effort по самому плану, не подключен; (c) кнопка mute/unmute из #9 всё ещё
+  не создана — теперь особенно актуальна, т.к. играют и SFX, и музыка, а без видимой кнопки Moloco
+  блокирует билд при `start_muted=true`; (d) не проверялось в реальном Preview со звуком (нужен реальный
+  user gesture в браузере) — ни SFX-свап, ни музыкальный fade/sting, ни loop seam на телефонном динамике.
 - Блоки спавнятся из `Block.prefab` по данным уровня (не пред-размещены в сцене) — осознанное решение
   ради data-driven и «минимум хардкода».
 - Вес: следить за суммой ассетов (бюджет 5 MB) уже на фазе 4.
