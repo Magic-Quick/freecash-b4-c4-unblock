@@ -10,6 +10,8 @@ interface PlbxApi {
     on_mute_change?: (cb: (muted: boolean) => void) => void;
     is_audio?: () => boolean;
     expose?: (name: string, fn: () => void, label?: string) => void;
+    set_app_store_url?: (url: string) => void;
+    set_google_play_url?: (url: string) => void;
 }
 
 function resolvePlbx(): PlbxApi | null {
@@ -57,5 +59,14 @@ export class Playbox {
 
     public static expose(name: string, fn: () => void, label?: string): void {
         resolvePlbx()?.expose?.(name, fn, label);
+    }
+
+    // Вызывать один раз в onLoad композиционного корня, до game_ready() (см. PLBX_LIFECYCLE_GUIDE.md).
+    public static set_app_store_url(url: string): void {
+        resolvePlbx()?.set_app_store_url?.(url);
+    }
+
+    public static set_google_play_url(url: string): void {
+        resolvePlbx()?.set_google_play_url?.(url);
     }
 }

@@ -32,6 +32,11 @@ export class GameEntryPoint extends Component {
     @property(Node)
     public ctaView: Node | null = null;
 
+    // Ссылки на карточки в сторах (GDD.md §8/§App Links, EXPORT_CHECKLIST.md) — задаются один раз
+    // до game_ready(), сама маршрутизация по платформе — на стороне plbx (PLBX_LIFECYCLE_GUIDE.md).
+    private static readonly APP_STORE_URL = 'https://apps.apple.com/app/id1673567402';
+    private static readonly GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.freecash.app2';
+
     // Защита от повторной инициализации (например, повторный onLoad при hot-reload в редакторе).
     private _initialized = false;
 
@@ -40,6 +45,8 @@ export class GameEntryPoint extends Component {
             return;
         }
         this._initialized = true;
+        Playbox.set_app_store_url(GameEntryPoint.APP_STORE_URL);
+        Playbox.set_google_play_url(GameEntryPoint.GOOGLE_PLAY_URL);
         // Явное подключение систем к EventBus происходит внутри самих System-компонентов (Фаза 2);
         // здесь фиксируется только состав ссылок композиционного корня.
     }
