@@ -117,8 +117,11 @@ export class LayoutAdapter extends Component {
     @property({ tooltip: 'landscape: зазор между платой и боковой колонкой' })
     public landscapeColumnGap = 36;
 
-    @property({ tooltip: 'landscape: вертикальный интервал между элементами HUD' })
+    @property({ tooltip: 'landscape: вертикальный интервал между панелями HUD (после Logo — landscapeHudLogoGap)' })
     public landscapeHudSpacing = 32;
+
+    @property({ tooltip: 'landscape: зазор именно после Logo, отдельно от интервала между панелями' })
+    public landscapeHudLogoGap = 36;
 
     @property({ tooltip: 'landscape: масштаб колонки HUD' })
     public landscapeHudScale = 1;
@@ -336,8 +339,10 @@ export class LayoutAdapter extends Component {
         const availableHeight = Math.max(1, topY - bottomY);
 
         // --- 2. Колонки меряем ДО платы: их ширина — вычет из горизонтального бюджета.
-        const hudSize = LayoutAdapter.measureColumn(this.hudColumnBase, this.landscapeHudSpacing, this.landscapeHudScale);
-        const buttonSize = LayoutAdapter.measureColumn(this.buttonColumnBase, this.landscapeButtonSpacing, this.landscapeButtonScale);
+        const hudGaps = LayoutAdapter.buildGaps(this.hudColumnBase.length, this.landscapeHudSpacing, this.landscapeHudLogoGap);
+        const buttonGaps = LayoutAdapter.buildGaps(this.buttonColumnBase.length, this.landscapeButtonSpacing);
+        const hudSize = LayoutAdapter.measureColumn(this.hudColumnBase, hudGaps, this.landscapeHudScale);
+        const buttonSize = LayoutAdapter.measureColumn(this.buttonColumnBase, buttonGaps, this.landscapeButtonScale);
         const sideBudget =
             this.landscapeEdgePadding * 2 +
             hudSize.width +
@@ -367,7 +372,7 @@ export class LayoutAdapter extends Component {
             this.hudLayer.setPosition(frameX - frameHalfWidth - this.landscapeColumnGap - hudSize.width / 2, frameY, 0);
             this.hudLayer.setScale(this.landscapeHudScale, this.landscapeHudScale, 1);
         }
-        LayoutAdapter.stackColumn(this.hudColumn, this.hudColumnBase, this.landscapeHudSpacing);
+        LayoutAdapter.stackColumn(this.hudColumn, this.hudColumnBase, hudGaps);
 
         if (this.bottomBarWidget) {
             // Иначе Widget каждый кадр возвращал бы бар вниз экрана и ломал правую колонку.
@@ -377,7 +382,7 @@ export class LayoutAdapter extends Component {
             this.bottomBar.setPosition(frameX + frameHalfWidth + this.landscapeColumnGap + buttonSize.width / 2, frameY, 0);
             this.bottomBar.setScale(this.landscapeButtonScale, this.landscapeButtonScale, 1);
         }
-        LayoutAdapter.stackColumn(this.buttonColumn, this.buttonColumnBase, this.landscapeButtonSpacing);
+        LayoutAdapter.stackColumn(this.buttonColumn, this.buttonColumnBase, buttonGaps);
 
         if (this.chevronNext) {
             this.chevronNext.angle = this.landscapeChevronAngle;
@@ -406,38 +411,51 @@ export class LayoutAdapter extends Component {
         }
     }
 
+    // Зазоры между соседними элементами колонки (length = count - 1). firstGap, если задан, идёт сразу
+    // после первого элемента (Logo отделяется от панелей сильнее, чем панели друг от друга) — остальные
+    // зазоры берут общий spacing.
+    private static buildGaps(count: number, spacing: number, firstGap?: number): number[] {
+        const gaps = new Array(Math.max(0, count - 1)).fill(spacing);
+        if (firstGap !== undefined && gaps.length > 0) {
+            gaps[0] = firstGap;
+        }
+        return gaps;
+    }
+
     // Габарит вертикальной колонки в экранных единицах: ширина — по самому широкому элементу,
-    // высота — сумма высот плюс интервалы между ними.
-    private static measureColumn(baselines: NodeBaseline[], spacing: number, scale: number): Size {
+    // высота — сумма высот плюс зазоры между ними.
+    private static measureColumn(baselines: NodeBaseline[], gaps: number[], scale: number): Size {
         let width = 0;
         let height = 0;
         for (const baseline of baselines) {
             width = Math.max(width, baseline.width);
             height += baseline.height;
         }
-        if (baselines.length > 1) {
-            height += spacing * (baselines.length - 1);
-        }
+        height += gaps.reduce((sum, gap) => sum + gap, 0);
         return new Size(width * scale, height * scale);
     }
 
     // Раскладывает элементы колонки сверху вниз в ЛОКАЛЬНЫХ координатах контейнера (масштаб контейнера
-    // уже применён снаружи), центрируя стопку относительно его начала координат.
-    private static stackColumn(nodes: Node[], baselines: NodeBaseline[], spacing: number): void {
+    // уже применён снаружи), центрируя стопку относительно его начала координат. gaps[i] — зазор между
+    // элементом i и i+1.
+    private static stackColumn(nodes: Node[], baselines: NodeBaseline[], gaps: number[]): void {
         const count = Math.min(nodes.length, baselines.length);
         if (count === 0) {
             return;
         }
-        let totalHeight = spacing * (count - 1);
+        let totalHeight = 0;
         for (let i = 0; i < count; i++) {
             totalHeight += baselines[i].height;
+            if (i < count - 1) {
+                totalHeight += gaps[i] ?? 0;
+            }
         }
         let cursorY = totalHeight / 2;
         for (let i = 0; i < count; i++) {
             const half = baselines[i].height / 2;
             cursorY -= half;
             nodes[i].setPosition(0, cursorY, 0);
-            cursorY -= half + spacing;
+            cursorY -= half + (gaps[i] ?? 0);
         }
     }
 }
