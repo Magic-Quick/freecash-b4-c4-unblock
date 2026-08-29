@@ -1,7 +1,7 @@
 import { _decorator, Component, Node, Button, tween, Tween, Vec3 } from 'cc';
 import { Playbox } from '../Core/Playbox';
 import { GlobalEventBus } from '../event-bus/event-bus';
-import { EVT_REQUEST_CTA, RequestCtaEvent } from '../event-bus/events';
+import { EVT_REQUEST_CTA, RequestCtaEvent, EVT_CTA_CLICKED, CtaClickedEvent } from '../event-bus/events';
 
 const { ccclass, property } = _decorator;
 
@@ -82,6 +82,7 @@ export class CTAView extends Component {
     }
 
     private onPlayClicked(): void {
+        GlobalEventBus.publish<CtaClickedEvent>(EVT_CTA_CLICKED, {});
         Playbox.download();
     }
 }

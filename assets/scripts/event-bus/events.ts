@@ -117,3 +117,9 @@ export const EVT_HINTS_CHANGED = 'EVT_HINTS_CHANGED';
 export interface HintsChangedEvent {
     hints: number;
 }
+
+// Публикуется CTAView до Playbox.download() на клик Play & Earn (AUDIO_GENERATION_PLAN.md §3/§7,
+// cta_tap). Views не хранят имена аудиоклипов — событие только сигнализирует факт клика,
+// SoundSystem сам решает, каким SFX на него ответить.
+export const EVT_CTA_CLICKED = 'EVT_CTA_CLICKED';
+export interface CtaClickedEvent {}

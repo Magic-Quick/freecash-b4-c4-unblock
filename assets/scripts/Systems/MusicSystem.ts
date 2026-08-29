@@ -77,6 +77,10 @@ export class MusicSystem extends Component {
         if (!this.stingSource || !this.stingClip || Playbox.is_muted() || !Playbox.is_audio()) {
             return;
         }
-        this.stingSource.playOneShot(this.stingClip);
+        // .play(), не playOneShot(): sting не перекрывает сам себя, а playOneShot(clip, volumeScale)
+        // игнорирует AudioSource.volume — так заданная на sourc'е громкость (0.75, скрипт §7.4) была бы
+        // мертвой настройкой.
+        this.stingSource.clip = this.stingClip;
+        this.stingSource.play();
     }
 }

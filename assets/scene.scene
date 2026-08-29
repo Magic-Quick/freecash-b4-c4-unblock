@@ -2132,6 +2132,10 @@
       "__uuid__": "e22e707b-af15-4e3f-b762-c57200615925",
       "__expectedType__": "cc.AudioClip"
     },
+    "coinCountClip": null,
+    "levelCompleteClip": null,
+    "finalFanfareClip": null,
+    "ctaTapClip": null,
     "_id": "xeL/DYZzHnJBmqvSo9p2YQ"
   },
   {
@@ -2320,7 +2324,7 @@
     "_clip": null,
     "_loop": true,
     "_playOnAwake": false,
-    "_volume": 0.22,
+    "_volume": 0.4,
     "_id": "bAyifUKcqbehkkn4SNAyVv"
   },
   {
@@ -2381,7 +2385,7 @@
     "_clip": null,
     "_loop": false,
     "_playOnAwake": false,
-    "_volume": 0.7,
+    "_volume": 0.75,
     "_id": "etYmcPdFsnvBknE4DSToQ+"
   },
   {
