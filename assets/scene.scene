@@ -2132,11 +2132,24 @@
       "__uuid__": "e22e707b-af15-4e3f-b762-c57200615925",
       "__expectedType__": "cc.AudioClip"
     },
-    "coinCountClip": null,
-    "levelCompleteClip": null,
-    "finalFanfareClip": null,
+    "coinCountClip": {
+      "__uuid__": "d3eac107-aa12-4db2-9fe1-f8faa07769a9",
+      "__expectedType__": "cc.AudioClip"
+    },
+    "levelCompleteClip": {
+      "__uuid__": "2bb0f366-add9-49f2-968c-c74e3017e890",
+      "__expectedType__": "cc.AudioClip"
+    },
+    "finalFanfareClip": {
+      "__uuid__": "9d904a4a-a925-4c0a-8f6a-5bb412ad0088",
+      "__expectedType__": "cc.AudioClip"
+    },
     "ctaTapClip": null,
-    "_id": "xeL/DYZzHnJBmqvSo9p2YQ"
+    "_id": "xeL/DYZzHnJBmqvSo9p2YQ",
+    "uiTapClip": {
+      "__uuid__": "829178a8-afa2-4462-a2d7-ba376c155729",
+      "__expectedType__": "cc.AudioClip"
+    }
   },
   {
     "__type__": "cc.AudioSource",

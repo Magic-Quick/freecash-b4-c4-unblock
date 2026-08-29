@@ -5,14 +5,20 @@ import { EVT_TAP, TapEvent, EVT_REQUEST_CTA, RequestCtaEvent } from '../event-bu
 
 const { ccclass, property } = _decorator;
 
-// AUDIO_GENERATION_PLAN.md §6.3: длительность fade-out gameplay-loop при показе CTA. Не в GameConfig —
-// ничего кроме этого tween её не читает (тот же прецедент, что и pulse-tween в CTAView).
-const CTA_MUSIC_FADE_DURATION = 0.22;
+// AUDIO_GENERATION_PLAN.md §6.3: длительности duck/restore вокруг packshot-sting. Не в GameConfig —
+// ничего кроме этих tween'ов их не читает (тот же прецедент, что и pulse-tween в CTAView).
+const CTA_MUSIC_DUCK_DURATION = 0.22;
+const CTA_MUSIC_RESTORE_DURATION = 0.6;
+const CTA_MUSIC_DUCK_VOLUME = 0.1;
+// Запасной хвост, если AudioClip.getDuration() ещё не готов (метаданные не подгрузились) — длиннее
+// самого длинного packshot-sting с запасом, чтобы luп не вернулся раньше, чем sting отыграет.
+const STING_FALLBACK_DURATION = 5;
 
 // Музыкальный слой из AUDIO_GENERATION_PLAN.md §6/§7. Looped gameplay-музыка стартует на первый
 // EVT_TAP — тот же жест, которым InputRouter уже разблокирует Playbox.tap() (браузерный autoplay
-// требует user gesture до звука). При EVT_REQUEST_CTA loop плавно уходит и уступает место одноразовому
-// packshot-sting; после этого loop не возобновляется — CTA терминальна (CTAView.show()/game_end()).
+// требует user gesture до звука). При EVT_REQUEST_CTA loop не останавливается, а приглушается
+// (duck) на время one-shot packshot-sting и возвращается к исходной громкости после — CTA-экран
+// висит неопределённо долго до тапа/закрытия сети, и полная тишина после sting'а читалась как баг.
 @ccclass('MusicSystem')
 export class MusicSystem extends Component {
     @property(AudioSource)
@@ -28,12 +34,16 @@ export class MusicSystem extends Component {
     private stingClip: AudioClip | null = null;
 
     private started = false;
+    private normalLoopVolume = 1;
     private fadeTween: Tween<AudioSource> | null = null;
 
     private readonly _onTap = this.onTap.bind(this);
     private readonly _onRequestCta = this.onRequestCta.bind(this);
 
     protected onLoad(): void {
+        if (this.loopSource) {
+            this.normalLoopVolume = this.loopSource.volume;
+        }
         GlobalEventBus.subscribe<TapEvent>(EVT_TAP, this._onTap);
         GlobalEventBus.subscribe<RequestCtaEvent>(EVT_REQUEST_CTA, this._onRequestCta);
     }
@@ -42,6 +52,7 @@ export class MusicSystem extends Component {
         GlobalEventBus.unsubscribe<TapEvent>(EVT_TAP, this._onTap);
         GlobalEventBus.unsubscribe<RequestCtaEvent>(EVT_REQUEST_CTA, this._onRequestCta);
         this.fadeTween?.stop();
+        this.unscheduleAllCallbacks();
     }
 
     private onTap(_event: TapEvent): void {
@@ -58,18 +69,27 @@ export class MusicSystem extends Component {
     }
 
     private onRequestCta(_event: RequestCtaEvent): void {
-        this.fadeOutLoop();
+        this.duckLoop();
         this.playSting();
     }
 
-    private fadeOutLoop(): void {
+    private duckLoop(): void {
         if (!this.loopSource || !this.loopSource.playing) {
             return;
         }
-        const source = this.loopSource;
-        this.fadeTween = tween(source)
-            .to(CTA_MUSIC_FADE_DURATION, { volume: 0 })
-            .call(() => source.stop())
+        this.fadeTween?.stop();
+        this.fadeTween = tween(this.loopSource)
+            .to(CTA_MUSIC_DUCK_DURATION, { volume: CTA_MUSIC_DUCK_VOLUME })
+            .start();
+    }
+
+    private restoreLoop(): void {
+        if (!this.loopSource || !this.loopSource.playing) {
+            return;
+        }
+        this.fadeTween?.stop();
+        this.fadeTween = tween(this.loopSource)
+            .to(CTA_MUSIC_RESTORE_DURATION, { volume: this.normalLoopVolume })
             .start();
     }
 
@@ -78,9 +98,10 @@ export class MusicSystem extends Component {
             return;
         }
         // .play(), не playOneShot(): sting не перекрывает сам себя, а playOneShot(clip, volumeScale)
-        // игнорирует AudioSource.volume — так заданная на sourc'е громкость (0.75, скрипт §7.4) была бы
-        // мертвой настройкой.
+        // игнорирует AudioSource.volume — так заданная на source'е громкость была бы мёртвой настройкой.
         this.stingSource.clip = this.stingClip;
         this.stingSource.play();
+        const duration = this.stingClip.getDuration() || STING_FALLBACK_DURATION;
+        this.scheduleOnce(() => this.restoreLoop(), duration);
     }
 }
