@@ -759,7 +759,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 96.76665646962851,
+      "width": 96.7822265625,
       "height": 40.32
     },
     "_anchorPoint": {
@@ -792,7 +792,7 @@
     "_string": "Puzzle",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 46.6875,
+    "_actualFontSize": 30,
     "_fontSize": 30,
     "_fontFamily": "Arial",
     "_lineHeight": 32,
@@ -927,7 +927,7 @@
     "_string": "1",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 100,
+    "_actualFontSize": 70,
     "_fontSize": 70,
     "_fontFamily": "Arial",
     "_lineHeight": 80,
@@ -1029,7 +1029,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 137.24841749811748,
+      "width": 137.2705078125,
       "height": 60.480000000000004
     },
     "_anchorPoint": {
@@ -1062,7 +1062,7 @@
     "_string": "Beginner",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 46.6875,
+    "_actualFontSize": 30,
     "_fontSize": 30,
     "_fontFamily": "Arial",
     "_lineHeight": 48,
@@ -2144,12 +2144,8 @@
       "__uuid__": "9d904a4a-a925-4c0a-8f6a-5bb412ad0088",
       "__expectedType__": "cc.AudioClip"
     },
-    "ctaTapClip": null,
-    "_id": "xeL/DYZzHnJBmqvSo9p2YQ",
-    "uiTapClip": {
-      "__uuid__": "829178a8-afa2-4462-a2d7-ba376c155729",
-      "__expectedType__": "cc.AudioClip"
-    }
+    "uiTapClip": null,
+    "_id": "xeL/DYZzHnJBmqvSo9p2YQ"
   },
   {
     "__type__": "cc.AudioSource",
@@ -4920,7 +4916,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 93.04655144013554,
+      "width": 93.0615234375,
       "height": 40.32
     },
     "_anchorPoint": {
@@ -4953,7 +4949,7 @@
     "_string": "Moves",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 46.6875,
+    "_actualFontSize": 30,
     "_fontSize": 30,
     "_fontFamily": "Arial",
     "_lineHeight": 32,
@@ -5088,7 +5084,7 @@
     "_string": "0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 100,
+    "_actualFontSize": 70,
     "_fontSize": 70,
     "_fontFamily": "Arial",
     "_lineHeight": 80,
@@ -5190,8 +5186,8 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 149.75618293486446,
-      "height": 25.200000000000003
+      "width": 149.7802734375,
+      "height": 25.2
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -5223,7 +5219,7 @@
     "_string": "Record: 52",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 46.6875,
+    "_actualFontSize": 30,
     "_fontSize": 30,
     "_fontFamily": "Arial",
     "_lineHeight": 20,
@@ -5899,7 +5895,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 14.25812625502008,
+      "width": 14.259765625,
       "height": 37.8
     },
     "_anchorPoint": {
@@ -5932,7 +5928,7 @@
     "_string": "2",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 43.574999999999996,
+    "_actualFontSize": 28,
     "_fontSize": 28,
     "_fontFamily": "Arial",
     "_lineHeight": 30,
@@ -6438,7 +6434,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 312.29995764307233,
+      "width": 312.349609375,
       "height": 54.4
     },
     "_anchorPoint": {
@@ -6471,7 +6467,7 @@
     "_string": "For illustration purposes only",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 31.125,
+    "_actualFontSize": 20,
     "_fontSize": 20,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
