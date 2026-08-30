@@ -29,6 +29,15 @@ export class TutorialSystem extends Component {
     @property(GameConfig)
     private config: GameConfig | null = null;
 
+    // Подсказка на старте уровня — величина постоянная: раскладка приходит из levels.json и одинакова
+    // и на первый старт, и на каждый рестарт (BoardSystem.onRestartRequest перестраивает поле из того
+    // же файла). Поэтому BFS гоняется один раз на уровень, а не на каждое EVT_LEVEL_STARTED: раньше он
+    // отрабатывал синхронно в первом же кадре сцены (его запускает GameStateSystem.start()) и заново на
+    // каждый тап Restart.
+    // null — валидное закэшированное значение («хода не требуется» либо «уровня нет в файле»), поэтому
+    // «посчитано» отличается от «не посчитано» через has(), а не сравнением с null.
+    private readonly hintCache: Map<number, TutorialShowEvent | null> = new Map();
+
     private readonly _onLevelStarted = this.onLevelStarted.bind(this);
     private readonly _onBlockMoved = this.onBlockMoved.bind(this);
 
@@ -46,12 +55,30 @@ export class TutorialSystem extends Component {
     // republish-ит его целиком) — оба раза пересчитывает и показывает подсказку заново, никакой
     // отдельной подписки на EVT_RESTART_REQUEST не нужно (DESIGN_UPDATE_PLAN.md §5 Шаг 3.4).
     private onLevelStarted(event: LevelStartedEvent): void {
-        const hint = this.computeHint(event.level);
+        const hint = this.getHint(event.level);
         if (hint) {
             GlobalEventBus.publish<TutorialShowEvent>(EVT_TUTORIAL_SHOW, hint);
         } else {
             GlobalEventBus.publish<TutorialHideEvent>(EVT_TUTORIAL_HIDE, {});
         }
+    }
+
+    // Кэширующая обёртка над computeHint() (см. hintCache). Наружу отдаётся КОПИЯ: результат уходит
+    // подписчикам как payload события, и кэш не должен зависеть от того, что кто-то из них сделает с
+    // полученным объектом — тот же приём, что у BoardSystem.getSnapshot().
+    private getHint(level: number): TutorialShowEvent | null {
+        if (!this.hintCache.has(level)) {
+            this.hintCache.set(level, this.computeHint(level));
+        }
+        const cached = this.hintCache.get(level) ?? null;
+        if (!cached) {
+            return null;
+        }
+        return {
+            fromCell: { ...cached.fromCell },
+            toCell: { ...cached.toCell },
+            blockLength: cached.blockLength,
+        };
     }
 
     private onBlockMoved(): void {

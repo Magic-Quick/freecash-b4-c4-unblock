@@ -108,7 +108,14 @@ export class BlockView extends Component {
         this.stopActiveTween();
     }
 
+    // Нода блока переиспользуется между уровнями/рестартами (BoardView держит пул вместо
+    // destroy+instantiate), поэтому setup() обязан начинаться со сброса всего живого состояния:
+    // недоигранный твин прошлого хода иначе продолжил бы тащить ноду к старой цели поверх новой
+    // позиции, а незакрытый touchStartPos — превратил бы отпускание пальца после рестарта в свайп
+    // уже по новой модели блока. Раньше это гарантировал onDestroy(), которого на пуле не бывает.
     public setup(blockModel: BlockModel, colPitch: number, rowPitch: number, level: number): void {
+        this.stopActiveTween();
+        this.touchStartPos = null;
         this.blockModel = blockModel;
         this.colPitch = colPitch;
         this.rowPitch = rowPitch;
@@ -247,6 +254,23 @@ export class BlockView extends Component {
                 GlobalEventBus.publish<MainReachedExitEvent>(EVT_MAIN_REACHED_EXIT, { level: this.level });
             })
             .start();
+    }
+
+    // Возврат ноды в пул BoardView: гасим ровно то же живое состояние, что и setup(), и выключаем
+    // ноду. blockModel сбрасывается в null намеренно — пока нода лежит в пуле, отложенный touch-колбек
+    // (Cocos гасит ввод на неактивной ноде, но событие могло уже быть в очереди) не найдёт модель и
+    // молча выйдет, вместо того чтобы опубликовать EVT_SWIPE по блоку снятого уровня.
+    public recycle(): void {
+        this.stopActiveTween();
+        this.touchStartPos = null;
+        this.blockModel = null;
+        // isValid: recycle() зовётся в том числе из BoardView.onDestroy(), т.е. на разрушении сцены.
+        // Board (владелец BoardView) и BlocksContainer — сиблинги, и Cocos сносит их по порядку, так
+        // что ноды блоков на этот момент обычно ещё живы — но полагаться на порядок разрушения ради
+        // выключения ноды, которую и так сносят, не стоит.
+        if (this.node.isValid) {
+            this.node.active = false;
+        }
     }
 
     private stopActiveTween(): void {

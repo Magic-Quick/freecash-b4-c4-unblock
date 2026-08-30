@@ -2144,7 +2144,10 @@
       "__uuid__": "9d904a4a-a925-4c0a-8f6a-5bb412ad0088",
       "__expectedType__": "cc.AudioClip"
     },
-    "uiTapClip": null,
+    "uiTapClip": {
+      "__uuid__": "829178a8-afa2-4462-a2d7-ba376c155729",
+      "__expectedType__": "cc.AudioClip"
+    },
     "_id": "xeL/DYZzHnJBmqvSo9p2YQ"
   },
   {

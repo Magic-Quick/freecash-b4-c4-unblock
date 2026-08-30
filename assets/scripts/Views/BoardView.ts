@@ -42,6 +42,15 @@ export class BoardView extends Component {
     public exitArrows: Node | null = null;
 
     private readonly blockViews: Map<number, BlockView> = new Map();
+    // Пул нод блоков: все когда-либо созданные BlockView, в порядке создания. Ноды НЕ уничтожаются
+    // между уровнями/рестартами, а гасятся (BlockView.recycle()) и переиспользуются — рестарт раньше
+    // делал 8 destroy() + 8 instantiate() + 8 getComponent() на каждый тап кнопки, теперь ноль
+    // аллокаций. Пул остаётся детьми blocksContainer, поэтому разрушение сцены снимает его вместе с
+    // контейнером и отдельного владения не заводится.
+    // Побочно чинится подвох отложенного destroy(): он срабатывает лишь в конце кадра, так что при
+    // рестарте в контейнере один кадр жили ОБА комплекта блоков — восемь умирающих (с ещё активными
+    // touch-листенерами) и восемь новых.
+    private readonly blockPool: BlockView[] = [];
     // Ссылка на View главного блока — нужна, чтобы по EVT_MAIN_DRIVE_START вызвать driveToExit()
     // без find()/getComponentInChildren(): BoardView и так держит map blockId→BlockView при спавне.
     private mainBlockView: BlockView | null = null;
@@ -104,24 +113,44 @@ export class BoardView extends Component {
         const offsetX = this.config.gridOriginX;
         const offsetY = this.config.gridOriginY;
         this.positionExit(exitRow, offsetX, offsetY, rowPitch);
-        if (this.blockPrefab && this.blocksContainer) {
-            blocks.forEach((block) => {
-                const blockNode = instantiate(this.blockPrefab as Prefab);
-                this.blocksContainer!.addChild(blockNode);
-                const blockView = blockNode.getComponent(BlockView);
-                if (!blockView) {
-                    return;
-                }
-                // BlockView instantiates at runtime — a prefab @property can't be wired to the
-                // scene's GameConfig node ahead of time, so BoardView forwards its own reference.
-                blockView.config = this.config;
-                blockView.setup(block, colPitch, rowPitch, level);
-                this.blockViews.set(block.id, blockView);
-                if (block.isMain) {
-                    this.mainBlockView = blockView;
-                }
-            });
+        blocks.forEach((block, index) => {
+            const blockView = this.obtainBlockView(index);
+            if (!blockView) {
+                return;
+            }
+            blockView.node.active = true;
+            // setup() сам гасит твин и touch-состояние переиспользованной ноды (см. BlockView.setup()).
+            blockView.setup(block, colPitch, rowPitch, level);
+            this.blockViews.set(block.id, blockView);
+            if (block.isMain) {
+                this.mainBlockView = blockView;
+            }
+        });
+    }
+
+    // Нода блока под позицию index: из пула, если она там уже есть, иначе создаётся один раз за
+    // сессию и в пуле остаётся. Пул заполняется строго по порядку (0..n-1) и только растёт, поэтому
+    // индексация в него плотная.
+    private obtainBlockView(index: number): BlockView | null {
+        const pooled = this.blockPool[index];
+        if (pooled) {
+            return pooled;
         }
+        if (!this.blockPrefab || !this.blocksContainer) {
+            return null;
+        }
+        const blockNode = instantiate(this.blockPrefab);
+        this.blocksContainer.addChild(blockNode);
+        const blockView = blockNode.getComponent(BlockView);
+        if (!blockView) {
+            blockNode.destroy();
+            return null;
+        }
+        // BlockView instantiates at runtime — a prefab @property can't be wired to the
+        // scene's GameConfig node ahead of time, so BoardView forwards its own reference.
+        blockView.config = this.config;
+        this.blockPool.push(blockView);
+        return blockView;
     }
 
     // Позиционирует ExitNotch/ExitArrows по exitRow уровня (DESIGN_UPDATE_PLAN.md §2/5.4): карман
@@ -146,23 +175,19 @@ export class BoardView extends Component {
         this.exitArrows?.setPosition(notchX, notchY, 0);
     }
 
+    // Инвариант после вызова: ни одна нода блока не активна и не числится в blockViews. Ноды при этом
+    // не уничтожаются, а возвращаются в пул (см. blockPool) — buildLevel() тут же поднимает из него
+    // столько, сколько нужно новой раскладке, а лишние так и остаются погашенными.
+    // recycle() гасит активные твины и touch-состояние — то, ради чего здесь раньше стоял destroy()
+    // вместо removeAllChildren(): осиротевшая нода с живым твином и touch-листенером была реальной
+    // утечкой. Теперь ноды не сиротеют вовсе (остаются детьми blocksContainer), а живое состояние
+    // снимается явно, не в надежде на onDestroy().
     public clearLevel(): void {
         this.blockViews.clear();
         this.mainBlockView = null;
-        // destroy(), не removeAllChildren(): removeAllChildren() только отсоединяет ноду от родителя,
-        // не вызывает onDestroy() — активные твины/touch-листенеры BlockView (см. BlockView.onDestroy())
-        // никогда бы не остановились, а просто продолжали жить на осиротевшей ноде (реальный leak при
-        // каждом переходе между уровнями).
-        this.destroyAllChildren(this.blocksContainer);
-    }
-
-    private destroyAllChildren(container: Node | null): void {
-        if (!container) {
-            return;
+        for (const blockView of this.blockPool) {
+            blockView.recycle();
         }
-        // Копия массива: destroy() синхронно укорачивает container.children, обход исходного массива
-        // пропустил бы элементы.
-        container.children.slice().forEach((child) => child.destroy());
     }
 
     private onBlockMoved(event: BlockMovedEvent): void {
