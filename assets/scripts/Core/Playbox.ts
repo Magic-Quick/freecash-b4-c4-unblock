@@ -1,72 +1,65 @@
-// Безопасная обёртка над глобальным `plbx` (см. PLBX_LIFECYCLE_GUIDE.md, ARCHITECTURE.md §6).
-// В Cocos Editor / Preview без установленного расширения `plbx` не определён — тогда все методы
-// становятся no-op и ничего не бросают (OPEN_ISSUES.md #3: реальный SDK инжектится на сборке под сеть).
-interface PlbxApi {
-    game_ready?: () => void;
-    tap?: () => void;
-    download?: () => void;
-    game_end?: () => void;
-    is_muted?: () => boolean;
-    on_mute_change?: (cb: (muted: boolean) => void) => void;
-    is_audio?: () => boolean;
-    expose?: (name: string, fn: () => void, label?: string) => void;
-    set_app_store_url?: (url: string) => void;
-    set_google_play_url?: (url: string) => void;
-}
+// Безопасная обёртка над playable-SDK сети (см. PLBX_LIFECYCLE_GUIDE.md, ARCHITECTURE.md §6).
+//
+// ВАЖНО: сборка Playbox инжектит глобал `window.plbx_html` (у старых сборок — `window.super_html`),
+// а НЕ `window.plbx`. Раньше resolve шёл по `window.plbx`, поэтому все вызовы (в т.ч. download()
+// по клику CTA и set_app_store_url/set_google_play_url) молча становились no-op: ссылки на сторы
+// лежали в бандле и были видны в билде, но до SDK не доезжали и редиректа не происходило.
+//
+// Разрешение глобала и цепочка plbx_html → super_html целиком делегированы сгенерированному
+// расширением адаптеру `plbx_html/plbx_html_playable.ts` — единственному файлу, который знает
+// актуальные имена API сетей и обновляется вместе с расширением. Здесь остаётся только защита от
+// окружения без `window` (Cocos Editor / нода): там всё превращается в no-op и ничего не бросает.
+import plbx from '../plbx_html/plbx_html_playable';
 
-function resolvePlbx(): PlbxApi | null {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    const candidate = (window as any).plbx;
-    return typeof candidate !== 'undefined' ? (candidate as PlbxApi) : null;
+function api(): typeof plbx | null {
+    return typeof window === 'undefined' ? null : plbx;
 }
 
 export class Playbox {
     // Вызывать ровно один раз за сессию — из GameEntryPoint после wiring сцены.
     public static game_ready(): void {
-        resolvePlbx()?.game_ready?.();
+        api()?.game_ready();
     }
 
     // Центральный input-handler дергает это на TOUCH_START/MOUSE_DOWN с дебаунсом 100ms (см. гайд).
     public static tap(): void {
-        resolvePlbx()?.tap?.();
+        api()?.tap();
     }
 
     // Клик по CTA-кнопке.
     public static download(): void {
-        resolvePlbx()?.download?.();
+        api()?.download();
     }
 
     // Показ CTA — терминальное состояние геймплея.
     public static game_end(): void {
-        resolvePlbx()?.game_end?.();
+        api()?.game_end();
     }
 
     // По умолчанию не замьючено, если контейнер сети не сообщил обратное.
     public static is_muted(): boolean {
-        return resolvePlbx()?.is_muted?.() ?? false;
+        return api()?.is_muted() ?? false;
     }
 
     public static on_mute_change(cb: (muted: boolean) => void): void {
-        resolvePlbx()?.on_mute_change?.(cb);
+        api()?.on_mute_change(cb);
     }
 
     // По умолчанию звук разрешён, если сеть не запретила его явно.
     public static is_audio(): boolean {
-        return resolvePlbx()?.is_audio?.() ?? true;
+        return api()?.is_audio() ?? true;
     }
 
     public static expose(name: string, fn: () => void, label?: string): void {
-        resolvePlbx()?.expose?.(name, fn, label);
+        api()?.expose(name, fn, label);
     }
 
     // Вызывать один раз в onLoad композиционного корня, до game_ready() (см. PLBX_LIFECYCLE_GUIDE.md).
     public static set_app_store_url(url: string): void {
-        resolvePlbx()?.set_app_store_url?.(url);
+        api()?.set_app_store_url(url);
     }
 
     public static set_google_play_url(url: string): void {
-        resolvePlbx()?.set_google_play_url?.(url);
+        api()?.set_google_play_url(url);
     }
 }
