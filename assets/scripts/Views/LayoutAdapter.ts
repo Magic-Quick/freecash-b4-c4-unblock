@@ -147,10 +147,19 @@ export class LayoutAdapter extends Component {
     // --- Нижний «подвал» (дисклеймер + бар), обе ориентации ---
 
     @property({ tooltip: 'Отступ дисклеймера от нижней кромки кадра' })
-    public bottomChromeMargin = 24;
+    public bottomChromeMargin = 40;
 
-    @property({ tooltip: 'Минимальный зазор между дисклеймером и нижним баром (страховка на экстремальных форматах)' })
+    @property({ tooltip: 'Зазор между дисклеймером и нижним баром' })
     public minChromeGap = 16;
+
+    @property({ tooltip: 'portrait: зазор платы до шапки' })
+    public portraitBoardGap = 20;
+
+    @property({ tooltip: 'portrait: зазор между платой и рядом кнопок (кнопки жёстко следуют за платой)' })
+    public portraitBoardBarGap = 20;
+
+    @property({ tooltip: 'portrait: отступ платы от боковых кромок кадра' })
+    public portraitBoardSidePadding = 0;
 
     private readonly _onResize = this.onResize.bind(this);
 
@@ -166,11 +175,6 @@ export class LayoutAdapter extends Component {
     private disclaimerBase: NodeBaseline | null = null;
     private hudColumnBase: NodeBaseline[] = [];
     private buttonColumnBase: NodeBaseline[] = [];
-    // Отступы шапки/подвала от кромок кадра. НЕ хардкод: выводятся из авторской сцены в
-    // captureBaseline, чтобы на дизайн-формате 9:16 раскладка совпадала с макетом до пикселя.
-    private hudTopMargin = 0;
-    private barBottomMargin = 0;
-    private disclaimerHalfHeight = 0;
     private ctaLogoBase: NodeBaseline | null = null;
     private ctaPlayButtonBase: NodeBaseline | null = null;
     private ctaCenterGroupBase: NodeBaseline | null = null;
@@ -223,21 +227,6 @@ export class LayoutAdapter extends Component {
         if (this.boardFrame && this.boardArea) {
             this.boardFrameOffset = LayoutAdapter.offsetWithin(this.boardFrame, this.boardArea);
         }
-
-        // Отступ HUD от верха кадра — расстояние от верхней кромки дизайн-канваса до верхней кромки
-        // полосы HUD в авторской сцене (совпадает с Widget top=160, который здесь выключен).
-        if (this.hudLayerBase) {
-            this.hudTopMargin = DESIGN_HEIGHT / 2 - (this.hudLayerBase.position.y + this.hudLayerBase.height / 2);
-        }
-        // Отступ бара от низа кадра берём из его же Widget (авторское намерение, 150), пока он ещё не
-        // выключен; если выравнивание по низу не задано — выводим из позиции в сцене.
-        const barWidget = this.bottomBar?.getComponent(Widget) ?? null;
-        if (barWidget && barWidget.isAlignBottom && barWidget.isAbsoluteBottom) {
-            this.barBottomMargin = barWidget.bottom;
-        } else if (this.bottomBarBase) {
-            this.barBottomMargin = DESIGN_HEIGHT / 2 + this.bottomBarBase.position.y - this.bottomBarBase.height / 2;
-        }
-        this.disclaimerHalfHeight = (this.disclaimerBase?.height ?? 0) / 2;
     }
 
     // Сумма локальных позиций по цепочке родителей до ancestor. Промежуточные ноды внутри boardArea
@@ -302,51 +291,39 @@ export class LayoutAdapter extends Component {
         // чего они расходились на каждом формате. Хуже того, -710 лежит ВНЕ дизайн-канваса (±640), и
         // условие видимости было aspect <= 0.488 — на 9:16, iPad и во всём landscape обязательный по
         // GDD §3 дисклеймер просто уходил за кадр. Теперь он привязан к тому же краю, что и бар.
-        const disclaimerY = -visibleHalfHeight + this.bottomChromeMargin + this.disclaimerHalfHeight;
+        // Высоту читаем с ЖИВОГО UITransform, а не из baseline: у Label overflow = NONE, он сам
+        // пересчитывает contentSize под кегль, и правка размера шрифта в сцене не должна требовать
+        // правки кода. Baseline — только страховка на первый кадр.
+        const disclaimerHeight = this.disclaimer?.getComponent(UITransform)?.contentSize.height
+            ?? this.disclaimerBase?.height ?? 0;
+        const disclaimerY = -visibleHalfHeight + this.bottomChromeMargin + disclaimerHeight / 2;
         this.disclaimer?.setPosition(this.disclaimerBase?.position.x ?? 0, disclaimerY, 0);
-        const disclaimerTopY = disclaimerY + this.disclaimerHalfHeight;
+        const disclaimerTopY = disclaimerY + disclaimerHeight / 2;
 
         if (isLandscape) {
             this.applyLandscape(visibleHalfWidth, visibleHalfHeight, disclaimerTopY);
         } else {
-            this.applyPortrait(visibleHalfHeight, disclaimerTopY);
+            this.applyPortrait(visibleHalfWidth, visibleHalfHeight, disclaimerTopY);
         }
     }
 
-    // Portrait: шапка прижата к верхней кромке кадра, подвал — к нижней, плата остаётся ровно там,
-    // где её поставил автор.
-    //
-    // Плату здесь сознательно НЕ масштабируем, и это не упущение: свободная высота между нижней
-    // кромкой HUD и верхней кромкой бара равна 2*C - (hudTopMargin + hudH + barBottomMargin + barH),
-    // т.е. 2*C - 730, а C = max(640, 360/aspect) по определению не меньше 640 — значит бюджет платы
-    // нигде не падает ниже авторских 550 и подгонять её не от чего. На aspect >= 9:16 C зафиксирована
-    // на 640, поэтому обе полосы стоят точно на макетных позициях; на более вытянутых экранах они
-    // симметрично расходятся, а лишняя высота уходит в воздух над и под платой.
-    private applyPortrait(visibleHalfHeight: number, disclaimerTopY: number): void {
-        if (this.boardArea && this.boardAreaBase) {
-            this.boardArea.setScale(this.boardAreaBase.scale);
-            this.boardArea.setPosition(this.boardAreaBase.position);
-        }
+    // Portrait: шапка прижата к верхней кромке кадра, подвал складывается снизу вверх от нижней,
+    // плата занимает всё, что осталось между ними.
+    private applyPortrait(visibleHalfWidth: number, visibleHalfHeight: number, disclaimerTopY: number): void {
+        // Шапка остаётся на авторской позиции из сцены и НЕ прижимается к верхней кромке кадра.
+        // Прижим пробовался и отменён: на вытянутых экранах кадр выше дизайн-канваса, шапка уезжала
+        // вверх на 140 юнитов и логотип попадал в зону выреза/«острова». Выигрыша от прижима нет —
+        // плата на таких экранах и так помещается в масштабе 1, лишняя высота ей не нужна, поэтому
+        // весь запас уходит в воздух над шапкой, где он безвреден.
+        let hudBottomY = visibleHalfHeight;
         if (this.hudLayer && this.hudLayerBase) {
-            this.hudLayer.setPosition(
-                this.hudLayerBase.position.x,
-                visibleHalfHeight - this.hudTopMargin - this.hudLayerBase.height / 2,
-                0,
-            );
+            this.hudLayer.setPosition(this.hudLayerBase.position);
             this.hudLayer.setScale(this.hudLayerBase.scale);
+            hudBottomY = this.hudLayerBase.position.y - this.hudLayerBase.height / 2;
         }
-        if (this.bottomBar && this.bottomBarBase) {
-            const barHalfHeight = this.bottomBarBase.height / 2;
-            // Второй аргумент — страховка: даже если подвал окажется выше авторского отступа бара
-            // (крупный bottomChromeMargin, более высокий шрифт дисклеймера), бар встанет над ним, а
-            // не на него. При текущих значениях сцены всегда выигрывает первый аргумент.
-            const barY = Math.max(
-                -visibleHalfHeight + this.barBottomMargin + barHalfHeight,
-                disclaimerTopY + this.minChromeGap + barHalfHeight,
-            );
-            this.bottomBar.setPosition(this.bottomBarBase.position.x, barY, 0);
-            this.bottomBar.setScale(this.bottomBarBase.scale);
-        }
+
+        this.fitBoardAndBar(visibleHalfWidth, hudBottomY, disclaimerTopY);
+
         LayoutAdapter.restoreColumn(this.hudColumn, this.hudColumnBase);
         LayoutAdapter.restoreColumn(this.buttonColumn, this.buttonColumnBase);
         if (this.ctaLogo && this.ctaLogoBase) {
@@ -358,6 +335,62 @@ export class LayoutAdapter extends Component {
         if (this.ctaCenterGroup && this.ctaCenterGroupBase) {
             this.ctaCenterGroup.setPosition(this.ctaCenterGroupBase.position);
             this.ctaCenterGroup.setScale(this.ctaCenterGroupBase.scale);
+        }
+    }
+
+    // Плата и ряд кнопок — ОДИН жёсткий блок: кнопки всегда стоят на фиксированном зазоре под платой
+    // (portraitBoardBarGap) и едут вместе с ней. Блок целиком вписывается в полосу между шапкой и
+    // дисклеймером; единственный элемент внизу, привязанный к кромке экрана, — сам дисклеймер.
+    //
+    // Так портрет ведёт себя так же, как landscape, где колонка кнопок тоже висит на кромке платы, а
+    // не на кромке экрана. Прежняя схема (бар отсчитывался от дисклеймера, плата занимала остаток)
+    // давала одинаковые числа на зажатых форматах, но на вытянутых экранах бар отрывался от платы и
+    // уезжал вниз вместе с кромкой — кнопки жили своей жизнью.
+    //
+    // Пока авторская геометрия помещается — плата остаётся ровно на своём месте из сцены в масштабе 1,
+    // и весь запас высоты уходит под кнопки, между ними и дисклеймером. Когда полосы не хватает
+    // (9:16 и квадратнее, где полувысота кадра зафиксирована на 640), блок ужимается: масштабируется
+    // плата, кнопки остаются в натуральную величину, чтобы не терять размер тач-таргета.
+    //
+    // Кламп не нуждается в ветке «влезло / не влезло»: при нехватке полосы обе его границы сходятся
+    // в одну точку.
+    private fitBoardAndBar(visibleHalfWidth: number, hudBottomY: number, disclaimerTopY: number): void {
+        if (!this.boardArea || !this.boardAreaBase || !this.boardFrameBase) {
+            return;
+        }
+        const barHeight = this.bottomBarBase?.height ?? 0;
+        const bandTop = hudBottomY - this.portraitBoardGap;
+        const bandBottom = disclaimerTopY + this.minChromeGap;
+        // Плате достаётся полоса за вычетом того, что жёстко висит под ней.
+        const boardBudget = Math.max(1, bandTop - bandBottom - barHeight - this.portraitBoardBarGap);
+        const availableWidth = Math.max(1, visibleHalfWidth * 2 - this.portraitBoardSidePadding * 2);
+        const scale = Math.min(
+            1,
+            boardBudget / this.boardFrameBase.height,
+            availableWidth / this.boardFrameBase.width,
+        );
+        const frameHalfHeight = (this.boardFrameBase.height * scale) / 2;
+        // Авторский центр рамки в системе координат родителя boardArea.
+        const authoredX = this.boardAreaBase.position.x + this.boardFrameOffset.x;
+        const authoredY = this.boardAreaBase.position.y + this.boardFrameOffset.y;
+        const lowestY = bandBottom + barHeight + this.portraitBoardBarGap + frameHalfHeight;
+        const highestY = bandTop - frameHalfHeight;
+        const frameY = Math.min(Math.max(authoredY, lowestY), highestY);
+        this.boardArea.setScale(scale, scale, 1);
+        this.boardArea.setPosition(
+            authoredX - this.boardFrameOffset.x * scale,
+            frameY - this.boardFrameOffset.y * scale,
+            0,
+        );
+
+        // Кнопки — жёстко под платой и по её горизонтальному центру.
+        if (this.bottomBar && this.bottomBarBase) {
+            this.bottomBar.setPosition(
+                authoredX,
+                frameY - frameHalfHeight - this.portraitBoardBarGap - barHeight / 2,
+                0,
+            );
+            this.bottomBar.setScale(this.bottomBarBase.scale);
         }
     }
 

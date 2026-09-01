@@ -2614,6 +2614,9 @@
     "landscapeCtaBaselineY": 0,
     "bottomChromeMargin": 24,
     "minChromeGap": 16,
+    "portraitBoardGap": 20,
+    "portraitBoardBarGap": 20,
+    "portraitBoardSidePadding": 0,
     "_id": "073Ggjx1JonMe4vyYKDyZN"
   },
   {
@@ -6439,8 +6442,8 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 312.29995764307233,
-      "height": 54.4
+      "width": 558.9796843624498,
+      "height": 65.74
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -6472,10 +6475,10 @@
     "_string": "For illustration purposes only",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 31.125,
-    "_fontSize": 20,
+    "_actualFontSize": 56.025,
+    "_fontSize": 36,
     "_fontFamily": "Arial",
-    "_lineHeight": 40,
+    "_lineHeight": 49,
     "_overflow": 0,
     "_enableWrapText": true,
     "_font": {
