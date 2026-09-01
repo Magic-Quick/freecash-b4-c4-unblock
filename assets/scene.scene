@@ -2612,6 +2612,8 @@
     "landscapeCtaEdgePadding": 60,
     "landscapeCtaColumnGap": 40,
     "landscapeCtaBaselineY": 0,
+    "bottomChromeMargin": 24,
+    "minChromeGap": 16,
     "_id": "073Ggjx1JonMe4vyYKDyZN"
   },
   {

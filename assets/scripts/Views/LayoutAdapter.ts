@@ -144,6 +144,14 @@ export class LayoutAdapter extends Component {
     @property({ tooltip: 'landscape: общая горизонталь Logo/PlayButton пэкшота (Y в дизайн-единицах)' })
     public landscapeCtaBaselineY = 0;
 
+    // --- Нижний «подвал» (дисклеймер + бар), обе ориентации ---
+
+    @property({ tooltip: 'Отступ дисклеймера от нижней кромки кадра' })
+    public bottomChromeMargin = 24;
+
+    @property({ tooltip: 'Минимальный зазор между дисклеймером и нижним баром (страховка на экстремальных форматах)' })
+    public minChromeGap = 16;
+
     private readonly _onResize = this.onResize.bind(this);
 
     // Portrait-база, захваченная один раз из сцены (см. captureBaseline).
@@ -158,7 +166,11 @@ export class LayoutAdapter extends Component {
     private disclaimerBase: NodeBaseline | null = null;
     private hudColumnBase: NodeBaseline[] = [];
     private buttonColumnBase: NodeBaseline[] = [];
-    private bottomBarWidget: Widget | null = null;
+    // Отступы шапки/подвала от кромок кадра. НЕ хардкод: выводятся из авторской сцены в
+    // captureBaseline, чтобы на дизайн-формате 9:16 раскладка совпадала с макетом до пикселя.
+    private hudTopMargin = 0;
+    private barBottomMargin = 0;
+    private disclaimerHalfHeight = 0;
     private ctaLogoBase: NodeBaseline | null = null;
     private ctaPlayButtonBase: NodeBaseline | null = null;
     private ctaCenterGroupBase: NodeBaseline | null = null;
@@ -170,10 +182,13 @@ export class LayoutAdapter extends Component {
         this.disableWidget(this.backgroundNode);
         this.disableWidget(this.packshotBg);
         this.disableWidget(this.hudLayer);
-        // У BottomBar Widget (align bottom) НЕ выключаем насовсем: в portrait он прижимает бар к
-        // реальному низу экрана на аппаратах выше 9:16 — авторское поведение, его не трогаем. Гасим
-        // только на время landscape, где бар уезжает в правую колонку (см. applyPortrait/applyLandscape).
-        this.bottomBarWidget = this.bottomBar?.getComponent(Widget) ?? null;
+        // Widget на BottomBar теперь гасится НАСОВСЕМ (раньше — только на время landscape). Он
+        // выравнивал бар по нижней кромке КАНВАСА, а канвас при policy FIXED_WIDTH (720×720/aspect) и
+        // клампе orthoHeight ниже не совпадает с реально видимой областью: на «квадратных» экранах
+        // канвас 720×960, а камера показывает 1280 по высоте — бар уезжал на 160 юнитов вверх, на
+        // плату. Ниже весь низ экрана ведёт этот компонент от кромки кадра камеры — единственной
+        // границы, которая всегда совпадает с тем, что реально видит игрок.
+        this.disableWidget(this.bottomBar);
         view.on('canvas-resize', this._onResize, this);
         this.applyLayout();
     }
@@ -208,6 +223,21 @@ export class LayoutAdapter extends Component {
         if (this.boardFrame && this.boardArea) {
             this.boardFrameOffset = LayoutAdapter.offsetWithin(this.boardFrame, this.boardArea);
         }
+
+        // Отступ HUD от верха кадра — расстояние от верхней кромки дизайн-канваса до верхней кромки
+        // полосы HUD в авторской сцене (совпадает с Widget top=160, который здесь выключен).
+        if (this.hudLayerBase) {
+            this.hudTopMargin = DESIGN_HEIGHT / 2 - (this.hudLayerBase.position.y + this.hudLayerBase.height / 2);
+        }
+        // Отступ бара от низа кадра берём из его же Widget (авторское намерение, 150), пока он ещё не
+        // выключен; если выравнивание по низу не задано — выводим из позиции в сцене.
+        const barWidget = this.bottomBar?.getComponent(Widget) ?? null;
+        if (barWidget && barWidget.isAlignBottom && barWidget.isAbsoluteBottom) {
+            this.barBottomMargin = barWidget.bottom;
+        } else if (this.bottomBarBase) {
+            this.barBottomMargin = DESIGN_HEIGHT / 2 + this.bottomBarBase.position.y - this.bottomBarBase.height / 2;
+        }
+        this.disclaimerHalfHeight = (this.disclaimerBase?.height ?? 0) / 2;
     }
 
     // Сумма локальных позиций по цепочке родителей до ancestor. Промежуточные ноды внутри boardArea
@@ -267,35 +297,54 @@ export class LayoutAdapter extends Component {
             this.packshotBg.setPosition(0, 0, 0);
         }
 
-        // Дисклеймер стоит на авторской portrait-позиции в обеих ориентациях (GDD §3, план §8.1) —
-        // в landscape камера держит orthoHeight = DESIGN_HEIGHT/2, т.е. видимая высота равна
-        // дизайн-канвасу так же, как и в portrait 9:16, и он остаётся у нижнего края экрана.
-        if (this.disclaimerBase) {
-            this.disclaimer?.setPosition(this.disclaimerBase.position);
-        }
+        // Дисклеймер — нижняя кромка кадра плюс отступ, в ОБЕИХ ориентациях. Раньше он стоял в
+        // фиксированной координате y = -710, а бар висел на Widget: две разные системы привязки, из-за
+        // чего они расходились на каждом формате. Хуже того, -710 лежит ВНЕ дизайн-канваса (±640), и
+        // условие видимости было aspect <= 0.488 — на 9:16, iPad и во всём landscape обязательный по
+        // GDD §3 дисклеймер просто уходил за кадр. Теперь он привязан к тому же краю, что и бар.
+        const disclaimerY = -visibleHalfHeight + this.bottomChromeMargin + this.disclaimerHalfHeight;
+        this.disclaimer?.setPosition(this.disclaimerBase?.position.x ?? 0, disclaimerY, 0);
+        const disclaimerTopY = disclaimerY + this.disclaimerHalfHeight;
 
         if (isLandscape) {
-            this.applyLandscape(visibleHalfWidth, visibleHalfHeight);
+            this.applyLandscape(visibleHalfWidth, visibleHalfHeight, disclaimerTopY);
         } else {
-            this.applyPortrait();
+            this.applyPortrait(visibleHalfHeight, disclaimerTopY);
         }
     }
 
-    private applyPortrait(): void {
+    // Portrait: шапка прижата к верхней кромке кадра, подвал — к нижней, плата остаётся ровно там,
+    // где её поставил автор.
+    //
+    // Плату здесь сознательно НЕ масштабируем, и это не упущение: свободная высота между нижней
+    // кромкой HUD и верхней кромкой бара равна 2*C - (hudTopMargin + hudH + barBottomMargin + barH),
+    // т.е. 2*C - 730, а C = max(640, 360/aspect) по определению не меньше 640 — значит бюджет платы
+    // нигде не падает ниже авторских 550 и подгонять её не от чего. На aspect >= 9:16 C зафиксирована
+    // на 640, поэтому обе полосы стоят точно на макетных позициях; на более вытянутых экранах они
+    // симметрично расходятся, а лишняя высота уходит в воздух над и под платой.
+    private applyPortrait(visibleHalfHeight: number, disclaimerTopY: number): void {
         if (this.boardArea && this.boardAreaBase) {
             this.boardArea.setScale(this.boardAreaBase.scale);
             this.boardArea.setPosition(this.boardAreaBase.position);
         }
         if (this.hudLayer && this.hudLayerBase) {
-            this.hudLayer.setPosition(this.hudLayerBase.position);
+            this.hudLayer.setPosition(
+                this.hudLayerBase.position.x,
+                visibleHalfHeight - this.hudTopMargin - this.hudLayerBase.height / 2,
+                0,
+            );
             this.hudLayer.setScale(this.hudLayerBase.scale);
         }
-        if (this.bottomBarWidget) {
-            // Возвращаем авторское поведение: бар сам прижимается к низу экрана.
-            this.bottomBarWidget.enabled = true;
-        }
         if (this.bottomBar && this.bottomBarBase) {
-            this.bottomBar.setPosition(this.bottomBarBase.position);
+            const barHalfHeight = this.bottomBarBase.height / 2;
+            // Второй аргумент — страховка: даже если подвал окажется выше авторского отступа бара
+            // (крупный bottomChromeMargin, более высокий шрифт дисклеймера), бар встанет над ним, а
+            // не на него. При текущих значениях сцены всегда выигрывает первый аргумент.
+            const barY = Math.max(
+                -visibleHalfHeight + this.barBottomMargin + barHalfHeight,
+                disclaimerTopY + this.minChromeGap + barHalfHeight,
+            );
+            this.bottomBar.setPosition(this.bottomBarBase.position.x, barY, 0);
             this.bottomBar.setScale(this.bottomBarBase.scale);
         }
         LayoutAdapter.restoreColumn(this.hudColumn, this.hudColumnBase);
@@ -322,16 +371,17 @@ export class LayoutAdapter extends Component {
     // Landscape-композиция: HUD-колонка слева, плата по центру на всю доступную высоту, колонка кнопок
     // справа. Ширины колонок НЕ захардкожены — меряются по contentSize реального содержимого, поэтому
     // добавление/удаление панели или кнопки в сцене автоматически меняет геометрию.
-    private applyLandscape(visibleHalfWidth: number, visibleHalfHeight: number): void {
+    private applyLandscape(visibleHalfWidth: number, visibleHalfHeight: number, disclaimerTopY: number): void {
         if (!this.boardArea || !this.boardFrameBase) {
             return;
         }
 
         // --- 1. Вертикальный бюджет платы: от верха экрана до верхней кромки дисклеймера.
         const topY = visibleHalfHeight - this.landscapeBoardTopMargin;
-        const disclaimerTopY = this.disclaimerBase
-            ? this.disclaimerBase.position.y + this.disclaimerBase.height / 2
-            : -visibleHalfHeight;
+        // disclaimerTopY приходит из applyLayout — от реальной кромки кадра. Раньше он считался от
+        // фиксированной y = -710, которая в landscape лежит за кадром: плата получала лишние ~120
+        // юнитов высоты и занимала место невидимого дисклеймера. Теперь дисклеймер виден и плата ему
+        // не мешает.
         const bottomY = Math.max(
             -visibleHalfHeight + this.landscapeBoardBottomMargin,
             disclaimerTopY + this.landscapeBoardBottomMargin,
@@ -374,10 +424,6 @@ export class LayoutAdapter extends Component {
         }
         LayoutAdapter.stackColumn(this.hudColumn, this.hudColumnBase, hudGaps);
 
-        if (this.bottomBarWidget) {
-            // Иначе Widget каждый кадр возвращал бы бар вниз экрана и ломал правую колонку.
-            this.bottomBarWidget.enabled = false;
-        }
         if (this.bottomBar) {
             this.bottomBar.setPosition(frameX + frameHalfWidth + this.landscapeColumnGap + buttonSize.width / 2, frameY, 0);
             this.bottomBar.setScale(this.landscapeButtonScale, this.landscapeButtonScale, 1);
