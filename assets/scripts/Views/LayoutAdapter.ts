@@ -1,4 +1,4 @@
-import { _decorator, Component, view, screen, Camera, Node, Widget, UITransform, Vec3, Size } from 'cc';
+import { _decorator, Component, view, screen, Camera, Label, Node, Widget, UITransform, Vec3, Size } from 'cc';
 
 const { ccclass, property } = _decorator;
 
@@ -152,6 +152,15 @@ export class LayoutAdapter extends Component {
     @property({ tooltip: 'Зазор между дисклеймером и нижним баром' })
     public minChromeGap = 16;
 
+    // Кегль дисклеймера зависит от ориентации. В portrait остаётся авторский из сцены: там строка
+    // идёт поперёк узкого кадра и читается. В landscape кадр вчетверо шире, строка визуально тонет
+    // у нижней кромки — на авторском кегле её практически не видно, поэтому здесь он поднимается.
+    @property({ tooltip: 'landscape: кегль дисклеймера (в portrait берётся авторский из сцены)' })
+    public landscapeDisclaimerFontSize = 36;
+
+    @property({ tooltip: 'landscape: межстрочный интервал дисклеймера' })
+    public landscapeDisclaimerLineHeight = 49;
+
     @property({ tooltip: 'portrait: зазор платы до шапки' })
     public portraitBoardGap = 20;
 
@@ -173,6 +182,8 @@ export class LayoutAdapter extends Component {
     private hudLayerBase: NodeBaseline | null = null;
     private bottomBarBase: NodeBaseline | null = null;
     private disclaimerBase: NodeBaseline | null = null;
+    private disclaimerFontSizeBase = 0;
+    private disclaimerLineHeightBase = 0;
     private hudColumnBase: NodeBaseline[] = [];
     private buttonColumnBase: NodeBaseline[] = [];
     private ctaLogoBase: NodeBaseline | null = null;
@@ -219,6 +230,11 @@ export class LayoutAdapter extends Component {
         this.hudLayerBase = this.hudLayer ? new NodeBaseline(this.hudLayer) : null;
         this.bottomBarBase = this.bottomBar ? new NodeBaseline(this.bottomBar) : null;
         this.disclaimerBase = this.disclaimer ? new NodeBaseline(this.disclaimer) : null;
+        const disclaimerLabel = this.disclaimer?.getComponent(Label) ?? null;
+        if (disclaimerLabel) {
+            this.disclaimerFontSizeBase = disclaimerLabel.fontSize;
+            this.disclaimerLineHeightBase = disclaimerLabel.lineHeight;
+        }
         this.hudColumnBase = this.hudColumn.map((node) => new NodeBaseline(node));
         this.buttonColumnBase = this.buttonColumn.map((node) => new NodeBaseline(node));
         this.ctaLogoBase = this.ctaLogo ? new NodeBaseline(this.ctaLogo) : null;
@@ -291,9 +307,10 @@ export class LayoutAdapter extends Component {
         // чего они расходились на каждом формате. Хуже того, -710 лежит ВНЕ дизайн-канваса (±640), и
         // условие видимости было aspect <= 0.488 — на 9:16, iPad и во всём landscape обязательный по
         // GDD §3 дисклеймер просто уходил за кадр. Теперь он привязан к тому же краю, что и бар.
+        this.applyDisclaimerFont(isLandscape);
         // Высоту читаем с ЖИВОГО UITransform, а не из baseline: у Label overflow = NONE, он сам
-        // пересчитывает contentSize под кегль, и правка размера шрифта в сцене не должна требовать
-        // правки кода. Baseline — только страховка на первый кадр.
+        // пересчитывает contentSize под кегль, и правка размера шрифта в сцене (или смена кегля по
+        // ориентации выше) не должна требовать правки формул. Baseline — только страховка.
         const disclaimerHeight = this.disclaimer?.getComponent(UITransform)?.contentSize.height
             ?? this.disclaimerBase?.height ?? 0;
         const disclaimerY = -visibleHalfHeight + this.bottomChromeMargin + disclaimerHeight / 2;
@@ -309,6 +326,26 @@ export class LayoutAdapter extends Component {
 
     // Portrait: шапка прижата к верхней кромке кадра, подвал складывается снизу вверх от нижней,
     // плата занимает всё, что осталось между ними.
+    // Кегль по ориентации. Перевыставляем только при реальном изменении: Label.fontSize — сеттер,
+    // который дёргает пересборку рендер-данных, а applyLayout вызывается на каждый canvas-resize.
+    private applyDisclaimerFont(isLandscape: boolean): void {
+        const label = this.disclaimer?.getComponent(Label) ?? null;
+        if (!label) {
+            return;
+        }
+        const fontSize = isLandscape ? this.landscapeDisclaimerFontSize : this.disclaimerFontSizeBase;
+        const lineHeight = isLandscape ? this.landscapeDisclaimerLineHeight : this.disclaimerLineHeightBase;
+        if (label.fontSize === fontSize && label.lineHeight === lineHeight) {
+            return;
+        }
+        label.fontSize = fontSize;
+        label.lineHeight = lineHeight;
+        // Свой contentSize Label пересчитывает в проходе рендера, то есть уже ПОСЛЕ этого кадра.
+        // Без принудительного пересчёта позицию ниже мы посчитали бы по старой высоте, и дисклеймер
+        // прыгнул бы на один кадр при каждой смене ориентации.
+        label.updateRenderData(true);
+    }
+
     private applyPortrait(visibleHalfWidth: number, visibleHalfHeight: number, disclaimerTopY: number): void {
         // Шапка остаётся на авторской позиции из сцены и НЕ прижимается к верхней кромке кадра.
         // Прижим пробовался и отменён: на вытянутых экранах кадр выше дизайн-канваса, шапка уезжала
