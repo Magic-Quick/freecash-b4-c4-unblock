@@ -2614,6 +2614,8 @@
     "landscapeCtaBaselineY": 0,
     "bottomChromeMargin": 24,
     "minChromeGap": 16,
+    "landscapeDisclaimerFontSize": 36,
+    "landscapeDisclaimerLineHeight": 49,
     "portraitBoardGap": 20,
     "portraitBoardBarGap": 20,
     "portraitBoardSidePadding": 0,
@@ -6442,7 +6444,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 312.3,
+      "width": 312.29995764307233,
       "height": 54.4
     },
     "_anchorPoint": {
@@ -6475,7 +6477,7 @@
     "_string": "For illustration purposes only",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 56.025,
+    "_actualFontSize": 31.125,
     "_fontSize": 20,
     "_fontFamily": "Arial",
     "_lineHeight": 40,
