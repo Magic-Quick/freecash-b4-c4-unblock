@@ -10,6 +10,7 @@
 // актуальные имена API сетей и обновляется вместе с расширением. Здесь остаётся только защита от
 // окружения без `window` (Cocos Editor / нода): там всё превращается в no-op и ничего не бросает.
 import plbx from '../plbx_html/plbx_html_playable';
+import { applovinAnalytics, AppLovinEvent } from '../plbx_html/applovin_analytics';
 
 function api(): typeof plbx | null {
     return typeof window === 'undefined' ? null : plbx;
@@ -17,8 +18,12 @@ function api(): typeof plbx | null {
 
 export class Playbox {
     // Вызывать ровно один раз за сессию — из GameEntryPoint после wiring сцены.
+    // Здесь же уходит AppLovin `DISPLAYED` (APPLOVIN_AXON_ANALYTICS.md): «креатив показан и готов к
+    // взаимодействию» — это ровно момент game_ready, и это единственное обязательное событие спеки.
+    // Оно должно быть первым в lifecycle-порядке, поэтому привязано к самому раннему вызову Playbox.
     public static game_ready(): void {
         api()?.game_ready();
+        applovinAnalytics.send(AppLovinEvent.DISPLAYED);
     }
 
     // Центральный input-handler дергает это на TOUCH_START/MOUSE_DOWN с дебаунсом 100ms (см. гайд).
@@ -29,11 +34,14 @@ export class Playbox {
     // Клик по CTA-кнопке.
     public static download(): void {
         api()?.download();
+        applovinAnalytics.send(AppLovinEvent.CTA_CLICKED);
     }
 
-    // Показ CTA — терминальное состояние геймплея.
+    // Показ CTA — терминальное состояние геймплея. Единственный вызов — CTAView.show(), т.е. этот же
+    // момент является показом энд-карда, поэтому здесь уходит AppLovin `ENDCARD_SHOWN`.
     public static game_end(): void {
         api()?.game_end();
+        applovinAnalytics.send(AppLovinEvent.ENDCARD_SHOWN);
     }
 
     // По умолчанию не замьючено, если контейнер сети не сообщил обратное.
